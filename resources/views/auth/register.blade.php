@@ -1,55 +1,38 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Register</title>
-    @vite(['resources/css/app.css'])
-</head>
-<body class="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-6">
-    <div class="w-full max-w-md bg-white shadow-sm rounded-xl ring-1 ring-slate-200 p-8">
+<x-layout title="Register">
+    <x-card>
         <h1 class="text-2xl font-semibold mb-6">Create an account</h1>
 
-        @if ($errors->any())
-            <div class="mb-4 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-800">
-                <ul class="space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <x-validation-errors />
 
         <form method="POST" action="{{ route('register') }}" class="space-y-4">
             @csrf
 
             <div>
-                <label class="block text-sm font-medium mb-1" for="name">Name</label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" required autofocus class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none" />
+                <x-input-label for="name">Name</x-input-label>
+                <x-text-input id="name" name="name" type="text" value="{{ old('name') }}" required autofocus />
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1" for="email">Email</label>
-                <input id="email" name="email" type="email" value="{{ old('email') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none" />
+                <x-input-label for="email">Email</x-input-label>
+                <x-text-input id="email" name="email" type="email" value="{{ old('email') }}" required />
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1" for="password">Password</label>
-                <input id="password" name="password" type="password" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none" />
+                <x-input-label for="password">Password</x-input-label>
+                <x-text-input id="password" name="password" type="password" required />
             </div>
 
             <div>
-                <label class="block text-sm font-medium mb-1" for="password_confirmation">Confirm Password</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" required class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none" />
+                <x-input-label for="password_confirmation">Confirm Password</x-input-label>
+                <x-text-input id="password_confirmation" name="password_confirmation" type="password" required />
             </div>
 
-            <button type="submit" class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800">Register</button>
+            <x-primary-button class="w-full">Register</x-primary-button>
         </form>
 
         <p class="mt-6 text-sm text-slate-600">
             Already have an account?
             <a href="{{ route('login') }}" class="text-slate-900 font-medium">Log in</a>
         </p>
-    </div>
-</body>
-</html>
+    </x-card>
+</x-layout>
