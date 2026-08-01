@@ -7,15 +7,29 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'provider', 'provider_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasRoles, Notifiable;
+
+    public function businesses()
+    {
+        return $this->belongsToMany(Business::class, 'business_users')
+            ->withPivot(['business_role'])
+            ->withTimestamps();
+    }
+
+    public function clientProfile(): HasOne
+    {
+        return $this->hasOne(ClientProfile::class);
+    }
 
     /**
      * Get the attributes that should be cast.

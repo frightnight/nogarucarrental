@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClientProfile;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,8 +32,16 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        $user->assignRole('client');
+
+        // Auto-create a basic profile so they can fill it in later
+        ClientProfile::create([
+            'user_id' => $user->id,
+            'full_name' => $user->name,
+        ]);
+
         Auth::login($user);
 
-        return redirect()->route('dashboard');
+        return redirect()->route('client.profile.edit');
     }
 }

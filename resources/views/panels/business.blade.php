@@ -1,0 +1,17 @@
+@extends('layouts.theme')
+@section('title', 'Business Dashboard | Nogaru Car Rental')
+@section('page-title', 'Business Dashboard')
+@section('content')
+    <div class="row">
+        <div class="col-xl-3 col-lg-6"><div class="card widget-flat"><div class="card-body"><i class="ti ti-steering-wheel widget-icon float-end text-primary"></i><h5 class="text-muted fw-normal mt-0">Fleet</h5><h3 class="mt-3 mb-3">Manage</h3><p class="mb-0 text-muted">Vehicles and rates</p></div></div></div>
+        <div class="col-xl-3 col-lg-6"><div class="card widget-flat"><div class="card-body"><i class="ti ti-calendar-check widget-icon float-end text-warning"></i><h5 class="text-muted fw-normal mt-0">Bookings</h5><h3 class="mt-3 mb-3">Review</h3><p class="mb-0 text-muted">Incoming reservations</p></div></div></div>
+        <div class="col-xl-3 col-lg-6"><div class="card widget-flat"><div class="card-body"><i class="ti ti-users widget-icon float-end text-success"></i><h5 class="text-muted fw-normal mt-0">Clients</h5><h3 class="mt-3 mb-3">View</h3><p class="mb-0 text-muted">Customer contacts</p></div></div></div>
+        <div class="col-xl-3 col-lg-6"><div class="card widget-flat"><div class="card-body"><i class="ti ti-world widget-icon float-end text-info"></i><h5 class="text-muted fw-normal mt-0">Landing Page</h5><h3 class="mt-3 mb-3">Edit</h3><p class="mb-0 text-muted">Public business page</p></div></div></div>
+    </div>
+    <div class="row">
+        <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body"><div class="avatar-md mb-3"><span class="avatar-title bg-primary-subtle text-primary rounded-3 fs-22"><i class="ti ti-steering-wheel"></i></span></div><h4>Fleet</h4><p class="text-muted">Add vehicles and manage rental rates.</p><a href="{{ route('business.fleet.index') }}" class="btn btn-primary">Manage Fleet</a></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body"><div class="avatar-md mb-3"><span class="avatar-title bg-warning-subtle text-warning rounded-3 fs-22"><i class="ti ti-calendar-stats"></i></span></div><h4>Reservations</h4><p class="text-muted">Review bookings and submitted payments.</p><a href="{{ route('business.bookings.index') }}" class="btn btn-warning">View Bookings</a></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body"><div class="avatar-md mb-3"><span class="avatar-title bg-success-subtle text-success rounded-3 fs-22"><i class="ti ti-users"></i></span></div><h4>Clients</h4><p class="text-muted">Access clients who have booked with you.</p><a href="{{ route('business.clients.index') }}" class="btn btn-success">View Clients</a></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="card"><div class="card-body"><div class="avatar-md mb-3"><span class="avatar-title bg-info-subtle text-info rounded-3 fs-22"><i class="ti ti-world"></i></span></div><h4>Landing Page</h4><p class="text-muted">Keep your public business profile up to date.</p><a href="{{ route('business.landing.content.edit') }}" class="btn btn-info">Edit Content</a></div></div></div>
+    </div>
+@endsection
