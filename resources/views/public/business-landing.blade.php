@@ -203,10 +203,11 @@
                     @php
                         $isSelected = $selectedCar && $selectedCar['name'] === $car['name'];
                         $images = $car['images'] ?? [];
-                        $carLink = url()->current().'/?car='.$carIndex;
+                        $carLink = route('vehicles.show', $car['car_id']);
                     @endphp
                     <div class="col-lg-6 col-xl-4">
-                        <div class="card h-100 border-0 shadow-sm {{ $isSelected ? 'border border-primary' : '' }}">
+                        <x-vehicle-card :title="$car['name']" :image="$images[0] ?? null" :status="$car['status']" :seats="$car['seats']" :vehicle-type="$car['vehicle_type']" :transmission="$car['transmission']" :rental-type="$car['rental_type']" :price="$car['daily_rate'] ? '₱'.number_format((float) $car['daily_rate'], 0) : null" :price-label="$car['rate_label']" :secondary-price="$car['price'] ?? 'Contact us for pricing'" :href="$carLink" action-label="View Details" :selected="$isSelected" />
+                        {{--
                             @if(count($images) > 0)
                                 <div class="overflow-hidden rounded-top">
                                     <div id="car-{{ $carIndex }}" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000">
@@ -257,7 +258,7 @@
                                     </a>
                                 </div>
                             </div>
-                        </div>
+                        --}}
                     </div>
                 @empty
                     <div class="col-12">
@@ -285,17 +286,22 @@
                 @php $features = $business['about_features'] ?? []; @endphp
                 @if(count($features) > 0)
                     @foreach($features as $feature)
-                        @if($feature['title'] || $feature['description'])
+                        @php
+                            $feature = is_array($feature)
+                                ? $feature
+                                : ['title' => $feature, 'description' => '', 'icon' => 'star'];
+                        @endphp
+                        @if(($feature['title'] ?? '') || ($feature['description'] ?? ''))
                             <div class="col-md-6 col-lg-4">
                                 <div class="card border-0 shadow-sm text-center h-100">
                                     <div class="card-body p-4">
                                         <div class="avatar-xl mx-auto mb-3">
                                             <span class="avatar-title bg-primary-subtle text-primary rounded-circle fs-22">
-                                                <i class="ti ti-{{ $feature['icon'] ?: 'star' }}"></i>
+                                                <i class="ti ti-{{ $feature['icon'] ?? 'star' }}"></i>
                                             </span>
                                         </div>
-                                        <h5 class="fw-bold">{{ $feature['title'] }}</h5>
-                                        <p class="text-muted fs-sm mb-0">{{ $feature['description'] }}</p>
+                                        <h5 class="fw-bold">{{ $feature['title'] ?? '' }}</h5>
+                                        <p class="text-muted fs-sm mb-0">{{ $feature['description'] ?? '' }}</p>
                                     </div>
                                 </div>
                             </div>

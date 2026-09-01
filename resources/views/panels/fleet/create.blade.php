@@ -104,6 +104,10 @@
                                                 </select>
                                                 @error('rental_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                             </div>
+                                            <div class="col-md-4"><label for="fuel_type" class="form-label fw-semibold">Fuel Type</label><select id="fuel_type" name="fuel_type" class="form-select"><option value="">Select...</option>@foreach(['Diesel Premium', 'Diesel Regular', 'Gasoline Premium', 'Gasoline Regular'] as $fuelType)<option value="{{ $fuelType }}" @selected(old('fuel_type') === $fuelType)>{{ $fuelType }}</option>@endforeach</select></div>
+                                            <div class="col-md-4"><label for="fuel_tank_capacity_liters" class="form-label fw-semibold">Fuel Tank Capacity (Liters)</label><input id="fuel_tank_capacity_liters" type="number" name="fuel_tank_capacity_liters" class="form-control" value="{{ old('fuel_tank_capacity_liters', 42) }}" min="1" max="500"></div>
+                                            <div class="col-md-4"><label for="fuel_display_bar" class="form-label fw-semibold">Fuel Display Bar</label><input id="fuel_display_bar" type="number" name="fuel_display_bar" class="form-control" value="{{ old('fuel_display_bar', 8) }}" min="0" max="8"><div class="form-text">0 empty · 8 full</div></div>
+                                            <div class="col-md-4"><label for="fuel_consumption_km_per_liter" class="form-label fw-semibold">Fuel Consumption (Km/L)</label><input id="fuel_consumption_km_per_liter" type="number" name="fuel_consumption_km_per_liter" class="form-control" value="{{ old('fuel_consumption_km_per_liter', 10) }}" min="0.1" max="100" step="0.01"></div>
                                             <div class="col-md-6">
                                                 <label for="registration_expires_at" class="form-label fw-semibold">Registration Expiry</label>
                                                 <input type="date" class="form-control" id="registration_expires_at" name="registration_expires_at" value="{{ old('registration_expires_at') }}">
@@ -152,27 +156,26 @@
                         </div>
 
                         <div class="card mb-4">
-                            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                            <div class="card-header bg-dark text-white">
                                 <h5 class="mb-0 text-white"><i class="ti ti-cash me-2"></i>Vehicle Rates</h5>
-                                <button id="add-rate" type="button" class="btn btn-sm btn-light">Add Rate</button>
+                                <button id="add-rate" type="button" class="d-none" aria-hidden="true" tabindex="-1"></button>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted small">Add rental periods and destination surcharges, such as 24hrs or Sorsogon/CamSur surcharge.</p>
+                                <p class="text-muted small">Rate names are fixed. Enter the amounts for this vehicle only.</p>
                                 <div id="rate-rows" class="d-flex flex-column gap-2">
-                                    @foreach(old('rates', [['name' => '', 'value' => '']]) as $index => $rate)
+                                    @foreach(\App\Http\Controllers\FleetRateController::VEHICLE_RATE_NAMES as $index => $rateName)
                                         <div class="rate-row row g-2 align-items-end">
                                             <div class="col-md-6">
                                                 <label class="form-label">Rate Name</label>
-                                                <input type="text" class="form-control @error("rates.$index.name") is-invalid @enderror" name="rates[{{ $index }}][name]" value="{{ $rate['name'] }}" placeholder="e.g. 24hrs">
+                                                <input type="text" class="form-control" value="{{ $rateName }}" readonly>
+                                                <input type="hidden" name="rates[{{ $index }}][name]" value="{{ $rateName }}">
                                                 @error("rates.$index.name")<div class="invalid-feedback">{{ $message }}</div>@enderror
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label">Amount (₱)</label>
-                                                <input type="number" class="form-control @error("rates.$index.value") is-invalid @enderror" name="rates[{{ $index }}][value]" value="{{ $rate['value'] }}" min="0" max="99999999.99" step="0.01" placeholder="0.00">
+                                                @php($defaultRate = match ($rateName) { '12hrs' => 4500, '24hrs' => 6000, 'Extension per hour' => 600, 'Pick-up & Drop-off' => 500, 'Car Wash Fee' => 500 })
+                                                <input type="number" class="form-control @error("rates.$index.value") is-invalid @enderror" name="rates[{{ $index }}][value]" value="{{ old("rates.$index.value", $defaultRate) }}" min="0" max="99999999.99" step="0.01" placeholder="0.00" required>
                                                 @error("rates.$index.value")<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                            </div>
-                                            <div class="col-md-2">
-                                                <button type="button" class="remove-rate btn btn-outline-danger w-100">Remove</button>
                                             </div>
                                         </div>
                                     @endforeach

@@ -41,7 +41,7 @@ class FleetRateControllerTest extends TestCase
             'vehicle_type' => 'SUV',
             'rates' => [
                 ['name' => '24hrs', 'value' => 4500],
-                ['name' => 'Sorsogon/CamSur surcharge', 'value' => 1000],
+                ['name' => '12hrs', 'value' => 3000],
             ],
         ]);
 
@@ -50,7 +50,7 @@ class FleetRateControllerTest extends TestCase
         $car = Car::where('business_id', $business->id)->where('car_model', 'Ford Everest')->firstOrFail();
 
         $this->assertDatabaseHas('rates', ['car_id' => $car->id, 'name' => '24hrs', 'value' => 4500]);
-        $this->assertDatabaseHas('rates', ['car_id' => $car->id, 'name' => 'Sorsogon/CamSur surcharge', 'value' => 1000]);
+        $this->assertDatabaseHas('rates', ['car_id' => $car->id, 'name' => '12hrs', 'value' => 3000]);
     }
 
     public function test_business_user_can_update_and_delete_a_rate_for_their_car(): void

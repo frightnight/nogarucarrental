@@ -13,12 +13,16 @@ class Booking extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_token',
         'business_id',
         'car_id',
+        'driver_license_number',
         'rental_type',
         'pickup_date',
         'pickup_time',
         'pickup_location',
+        'pickup_latitude',
+        'pickup_longitude',
         'destination_itinerary',
         'itinerary_stops',
         'total_distance_km',
@@ -29,6 +33,8 @@ class Booking extends Model
         'handover_option',
         'handover_other',
         'return_location',
+        'dropoff_latitude',
+        'dropoff_longitude',
         'initial_rate',
         'final_rate',
         'delivery_fee',
@@ -51,6 +57,10 @@ class Booking extends Model
         'passengers_count' => 'integer',
         'itinerary_stops' => 'array',
         'total_distance_km' => 'decimal:2',
+        'pickup_latitude' => 'decimal:7',
+        'pickup_longitude' => 'decimal:7',
+        'dropoff_latitude' => 'decimal:7',
+        'dropoff_longitude' => 'decimal:7',
         'initial_rate' => 'decimal:2',
         'final_rate' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
@@ -74,6 +84,11 @@ class Booking extends Model
     public function car(): BelongsTo
     {
         return $this->belongsTo(Car::class);
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(Driver::class, 'driver_license_number', 'license_number');
     }
 
     public function inspections(): HasMany

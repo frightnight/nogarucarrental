@@ -112,6 +112,10 @@
                                                 </select>
                                                 @error('rental_type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                             </div>
+                                            <div class="col-md-4"><label for="fuel_type" class="form-label fw-semibold">Fuel Type</label><select id="fuel_type" name="fuel_type" class="form-select"><option value="">Select...</option>@foreach(['Diesel Premium', 'Diesel Regular', 'Gasoline Premium', 'Gasoline Regular'] as $fuelType)<option value="{{ $fuelType }}" @selected(old('fuel_type', $car->fuel_type) === $fuelType)>{{ $fuelType }}</option>@endforeach</select></div>
+                                            <div class="col-md-4"><label for="fuel_tank_capacity_liters" class="form-label fw-semibold">Fuel Tank Capacity (Liters)</label><input id="fuel_tank_capacity_liters" type="number" name="fuel_tank_capacity_liters" class="form-control" value="{{ old('fuel_tank_capacity_liters', $car->fuel_tank_capacity_liters) }}" min="1" max="500"></div>
+                                            <div class="col-md-4"><label for="fuel_display_bar" class="form-label fw-semibold">Fuel Display Bar</label><input id="fuel_display_bar" type="number" name="fuel_display_bar" class="form-control" value="{{ old('fuel_display_bar', $car->fuel_display_bar) }}" min="0" max="8"><div class="form-text">0 empty · 8 full</div></div>
+                                            <div class="col-md-4"><label for="fuel_consumption_km_per_liter" class="form-label fw-semibold">Fuel Consumption (Km/L)</label><input id="fuel_consumption_km_per_liter" type="number" name="fuel_consumption_km_per_liter" class="form-control" value="{{ old('fuel_consumption_km_per_liter', $car->fuel_consumption_km_per_liter) }}" min="0.1" max="100" step="0.01"></div>
                                             <div class="col-md-4">
                                                 <label for="seats" class="form-label fw-semibold">Seats</label>
                                                 <input type="number" class="form-control @error('seats') is-invalid @enderror" id="seats" name="seats" value="{{ old('seats', $car->seats) }}" min="1" max="60">
@@ -189,62 +193,20 @@
                             <h5 class="mb-0 text-white"><i class="ti ti-cash me-2"></i>Vehicle Rates</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ route('business.fleet.rates.store', $car) }}" class="row g-2 align-items-end mb-4">
+                            @php($rateValues = $car->rates->pluck('value', 'name'))
+                            <p class="text-muted">Rate names are fixed. Enter the amounts for this vehicle only.</p>
+                            <form method="POST" action="{{ route('business.fleet.rates.sync', $car) }}" class="row g-3">
                                 @csrf
-                                <div class="col-md-6">
-                                    <label for="rate-name" class="form-label fw-semibold">Rate Name</label>
-                                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="rate-name" name="name" value="{{ old('name') }}" placeholder="e.g. 24hrs" required>
-                                    @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="rate-value" class="form-label fw-semibold">Amount (₱)</label>
-                                    <input type="number" class="form-control @error('value') is-invalid @enderror" id="rate-value" name="value" value="{{ old('value') }}" min="0" max="99999999.99" step="0.01" required>
-                                    @error('value')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary w-100"><i class="ti ti-plus me-1"></i>Add Rate</button>
-                                </div>
+                                @method('PUT')
+                                @foreach(\App\Http\Controllers\FleetRateController::VEHICLE_RATE_NAMES as $rateName)
+                                    @php($defaultRate = match ($rateName) { '12hrs' => 4500, '24hrs' => 6000, 'Extension per hour' => 600, 'Pick-up & Drop-off' => 500, 'Car Wash Fee' => 500 })
+                                    <div class="col-md-6">
+                                        <label for="rate-{{ $loop->index }}" class="form-label fw-semibold">{{ $rateName }}</label>
+                                        <div class="input-group"><span class="input-group-text">{{ str_contains($rateName, 'DISCOUNT') ? '%' : '₱' }}</span><input id="rate-{{ $loop->index }}" type="number" class="form-control" name="rates[{{ $rateName }}]" value="{{ old('rates.'.$rateName, $rateValues[$rateName] ?? 0) }}" min="0" max="99999999.99" step="0.01" required></div>
+                                    </div>
+                                @endforeach
+                                <div class="col-12"><button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy me-1"></i>Save Rate Schedule</button></div>
                             </form>
-
-                            @if($car->rates->isNotEmpty())
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Rate Name</th>
-                                                <th>Amount</th>
-                                                <th class="text-end">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($car->rates as $rate)
-                                                <tr>
-                                                    <td>
-                                                        <form id="rate-update-{{ $rate->id }}" method="POST" action="{{ route('business.fleet.rates.update', [$car, $rate]) }}">
-                                                            @csrf
-                                                            @method('PUT')
-                                                            <input type="text" class="form-control form-control-sm" name="name" value="{{ $rate->name }}" required>
-                                                        </form>
-                                                    </td>
-                                                    <td>
-                                                        <input form="rate-update-{{ $rate->id }}" type="number" class="form-control form-control-sm" name="value" value="{{ $rate->value }}" min="0" max="99999999.99" step="0.01" required>
-                                                    </td>
-                                                    <td class="text-end text-nowrap">
-                                                        <button form="rate-update-{{ $rate->id }}" type="submit" class="btn btn-sm btn-outline-primary">Save</button>
-                                                        <form method="POST" action="{{ route('business.fleet.rates.destroy', [$car, $rate]) }}" class="d-inline" onsubmit="return confirm('Remove this rate?');">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            @else
-                                <p class="text-muted mb-0">No rates have been added for this vehicle.</p>
-                            @endif
                         </div>
                     </div>
 

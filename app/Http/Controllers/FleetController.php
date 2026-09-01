@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\BusinessPlan;
 use App\Models\Business;
 use App\Models\Car;
 use App\Models\CarImage;
@@ -12,6 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class FleetController extends Controller
@@ -57,6 +57,10 @@ class FleetController extends Controller
             'vehicle_type' => 'nullable|string|max:255',
             'variant' => 'nullable|string|max:255',
             'transmission' => 'nullable|string|max:50',
+            'fuel_type' => 'nullable|in:Diesel Premium,Diesel Regular,Gasoline Premium,Gasoline Regular',
+            'fuel_tank_capacity_liters' => 'nullable|integer|min:1|max:500',
+            'fuel_display_bar' => 'nullable|integer|min:0|max:8',
+            'fuel_consumption_km_per_liter' => 'nullable|numeric|min:0.1|max:100',
             'seats' => 'nullable|integer|min:1|max:60',
             'rental_type' => 'nullable|string|max:50',
             'status' => 'nullable|in:available,maintenance,inactive',
@@ -67,7 +71,7 @@ class FleetController extends Controller
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
             'rates' => 'nullable|array',
-            'rates.*.name' => 'nullable|string|max:255|required_with:rates.*.value',
+            'rates.*.name' => ['nullable', 'string', Rule::in(FleetRateController::VEHICLE_RATE_NAMES), 'required_with:rates.*.value'],
             'rates.*.value' => 'nullable|numeric|min:0|max:99999999.99|required_with:rates.*.name',
         ]);
 
@@ -76,6 +80,10 @@ class FleetController extends Controller
             'vehicle_type' => $validated['vehicle_type'] ?? null,
             'variant' => $validated['variant'] ?? null,
             'transmission' => $validated['transmission'] ?? null,
+            'fuel_type' => $validated['fuel_type'] ?? null,
+            'fuel_tank_capacity_liters' => $validated['fuel_tank_capacity_liters'] ?? null,
+            'fuel_display_bar' => $validated['fuel_display_bar'] ?? null,
+            'fuel_consumption_km_per_liter' => $validated['fuel_consumption_km_per_liter'] ?? null,
             'seats' => $validated['seats'] ?? null,
             'rental_type' => $validated['rental_type'] ?? null,
             'status' => $validated['status'] ?? 'available',
@@ -120,6 +128,10 @@ class FleetController extends Controller
             'vehicle_type' => 'nullable|string|max:255',
             'variant' => 'nullable|string|max:255',
             'transmission' => 'nullable|string|max:50',
+            'fuel_type' => 'nullable|in:Diesel Premium,Diesel Regular,Gasoline Premium,Gasoline Regular',
+            'fuel_tank_capacity_liters' => 'nullable|integer|min:1|max:500',
+            'fuel_display_bar' => 'nullable|integer|min:0|max:8',
+            'fuel_consumption_km_per_liter' => 'nullable|numeric|min:0.1|max:100',
             'seats' => 'nullable|integer|min:1|max:60',
             'rental_type' => 'nullable|string|max:50',
             'status' => 'nullable|in:available,maintenance,inactive',
@@ -138,6 +150,10 @@ class FleetController extends Controller
             'vehicle_type' => $validated['vehicle_type'] ?? null,
             'variant' => $validated['variant'] ?? null,
             'transmission' => $validated['transmission'] ?? null,
+            'fuel_type' => $validated['fuel_type'] ?? null,
+            'fuel_tank_capacity_liters' => $validated['fuel_tank_capacity_liters'] ?? null,
+            'fuel_display_bar' => $validated['fuel_display_bar'] ?? null,
+            'fuel_consumption_km_per_liter' => $validated['fuel_consumption_km_per_liter'] ?? null,
             'seats' => $validated['seats'] ?? null,
             'rental_type' => $validated['rental_type'] ?? null,
             'status' => $validated['status'] ?? $car->status,
@@ -185,6 +201,48 @@ class FleetController extends Controller
 
         return redirect()->route('business.fleet.index')
             ->with('success', 'Vehicle removed successfully.');
+    }
+
+    public function updateFuelPrices(Request $request): RedirectResponse
+    {
+        $business = $this->getBusiness();
+        $validated = $request->validate([
+            'diesel_premium_price_per_liter' => 'required|numeric|min:0|max:999.99',
+            'diesel_regular_price_per_liter' => 'required|numeric|min:0|max:999.99',
+            'gasoline_premium_price_per_liter' => 'required|numeric|min:0|max:999.99',
+            'gasoline_regular_price_per_liter' => 'required|numeric|min:0|max:999.99',
+        ]);
+        $business->update($validated);
+
+        return redirect()->route('business.fleet.index')->with('success', 'Fuel prices updated.');
+    }
+
+    public function updateLongTermDiscounts(Request $request): RedirectResponse
+    {
+        $business = $this->getBusiness();
+        $validated = $request->validate([
+            'discount_7_to_14_days_percent' => 'required|numeric|min:0|max:100',
+            'discount_15_to_24_days_percent' => 'required|numeric|min:0|max:100',
+            'discount_25_to_31_days_percent' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $business->update($validated);
+
+        return redirect()->route('business.fleet.index')->with('success', 'Long-term discounts updated.');
+    }
+
+    public function updateGarageAddress(Request $request): RedirectResponse
+    {
+        $business = $this->getBusiness();
+        $validated = $request->validate([
+            'garage_address' => 'required|string|max:255',
+            'garage_latitude' => 'required|numeric|between:-90,90',
+            'garage_longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        $business->update($validated);
+
+        return redirect()->route('business.fleet.index')->with('success', 'Garage address updated.');
     }
 
     /**
@@ -251,15 +309,17 @@ class FleetController extends Controller
 
     private function hasVehicleCapacity(Business $business): bool
     {
-        $limit = ($business->plan ?? BusinessPlan::Free)->vehicleLimit();
+        $limit = $business->plan?->vehicle_limit;
 
         return $limit === null || $business->cars()->count() < $limit;
     }
 
     private function vehicleLimitMessage(Business $business): string
     {
-        $plan = $business->plan ?? BusinessPlan::Free;
+        $plan = $business->plan;
 
-        return "The {$plan->label()} plan supports up to {$plan->vehicleLimit()} vehicles. Upgrade your plan to add more.";
+        return $plan === null
+            ? 'This business does not have an assigned plan.'
+            : "The {$plan->name} plan supports up to {$plan->vehicle_limit} vehicles. Upgrade your plan to add more.";
     }
 }

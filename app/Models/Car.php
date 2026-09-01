@@ -17,6 +17,10 @@ class Car extends Model
         'car_model',
         'variant',
         'transmission',
+        'fuel_type',
+        'fuel_tank_capacity_liters',
+        'fuel_display_bar',
+        'fuel_consumption_km_per_liter',
         'seats',
         'rental_type',
         'status',
@@ -31,6 +35,9 @@ class Car extends Model
     protected $casts = [
         'year_model' => 'integer',
         'seats' => 'integer',
+        'fuel_tank_capacity_liters' => 'integer',
+        'fuel_display_bar' => 'integer',
+        'fuel_consumption_km_per_liter' => 'decimal:2',
         'registration_expires_at' => 'date',
         'insurance_expires_at' => 'date',
     ];

@@ -14,11 +14,15 @@ use App\Http\Controllers\BusinessPlanController;
 use App\Http\Controllers\ClientDashboardController;
 use App\Http\Controllers\ClientProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DriverController;
 use App\Http\Controllers\FleetController;
 use App\Http\Controllers\FleetRateController;
+use App\Http\Controllers\GuestCheckoutController;
 use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\PartnerFleetController;
 use App\Http\Controllers\PublicLandingController;
 use App\Http\Controllers\RentalManagementController;
+use App\Http\Controllers\VehicleDetailsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicLandingController::class, 'index'])->name('home');
@@ -26,10 +30,16 @@ Route::get('/', [PublicLandingController::class, 'index'])->name('home');
 Route::get('/businesses', [BusinessLandingController::class, 'index'])->name('businesses.index');
 Route::get('/businesses/{slug}', [BusinessLandingController::class, 'show'])->name('businesses.show');
 Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');
+Route::get('/vehicles/{car}', [VehicleDetailsController::class, 'show'])->name('vehicles.show');
+Route::post('/vehicles/{car}/guest-checkout', [GuestCheckoutController::class, 'store'])->name('guest-checkout.store');
+Route::get('/guest-checkout/{booking}/{token}', [GuestCheckoutController::class, 'show'])->name('guest-checkout.show');
+Route::post('/guest-checkout/{booking}/{token}/payment', [GuestCheckoutController::class, 'payment'])->name('guest-checkout.payment');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::get('register/business', [RegisteredUserController::class, 'createBusiness'])->name('business.register');
+    Route::post('register/business', [RegisteredUserController::class, 'storeBusiness'])->name('business.register.store');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
@@ -49,6 +59,11 @@ Route::middleware('auth')->group(function () {
     Route::put('admin/business-plans/{business}', [BusinessPlanController::class, 'update'])->middleware('role:administrator')->name('admin.business-plans.update');
     Route::get('business', [BusinessDashboardController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.dashboard');
     Route::get('business/plan', [BusinessPlanController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.plan');
+    Route::get('business/partner-fleets', [PartnerFleetController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.partner-fleets.index');
+    Route::post('business/partner-fleets', [PartnerFleetController::class, 'store'])->middleware('role:business_owner|booker|agent')->name('business.partner-fleets.store');
+    Route::put('business/partner-fleets/{partnerFleetRequest}/approve', [PartnerFleetController::class, 'approve'])->middleware('role:business_owner|booker|agent')->name('business.partner-fleets.approve');
+    Route::put('business/partner-fleets/{partnerFleetRequest}/reject', [PartnerFleetController::class, 'reject'])->middleware('role:business_owner|booker|agent')->name('business.partner-fleets.reject');
+    Route::delete('business/partner-fleets/{partnerFleetRequest}', [PartnerFleetController::class, 'destroy'])->middleware('role:business_owner|booker|agent')->name('business.partner-fleets.destroy');
     Route::get('business/bookings/create', [RentalManagementController::class, 'createBooking'])->middleware('role:business_owner|booker|agent')->name('business.bookings.create');
     Route::post('business/bookings/manual', [RentalManagementController::class, 'storeBooking'])->middleware('role:business_owner|booker|agent')->name('business.bookings.manual.store');
     Route::get('business/bookings/{booking}/agreement', [RentalManagementController::class, 'agreement'])->middleware('role:business_owner|booker|agent')->name('business.bookings.agreement');
@@ -69,6 +84,30 @@ Route::middleware('auth')->group(function () {
     Route::get('business/fleet', [FleetController::class, 'index'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.fleet.index');
+    Route::put('business/fleet/fuel-prices', [FleetController::class, 'updateFuelPrices'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.fleet.fuel-prices.update');
+    Route::put('business/fleet/long-term-discounts', [FleetController::class, 'updateLongTermDiscounts'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.fleet.long-term-discounts.update');
+    Route::put('business/fleet/garage-address', [FleetController::class, 'updateGarageAddress'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.fleet.garage-address.update');
+    Route::get('business/drivers', [DriverController::class, 'index'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.drivers.index');
+    Route::post('business/drivers', [DriverController::class, 'store'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.drivers.store');
+    Route::get('business/drivers/{driver}', [DriverController::class, 'show'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.drivers.show');
+    Route::put('business/drivers/{driver}', [DriverController::class, 'update'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.drivers.update');
+    Route::delete('business/drivers/{driver}', [DriverController::class, 'destroy'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.drivers.destroy');
     Route::get('business/fleet/create', [FleetController::class, 'create'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.fleet.create');
@@ -87,6 +126,9 @@ Route::middleware('auth')->group(function () {
     Route::post('business/fleet/{car}/rates', [FleetRateController::class, 'store'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.fleet.rates.store');
+    Route::put('business/fleet/{car}/rates', [FleetRateController::class, 'sync'])
+        ->middleware('role:business_owner|booker|agent')
+        ->name('business.fleet.rates.sync');
     Route::put('business/fleet/{car}/rates/{rate}', [FleetRateController::class, 'update'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.fleet.rates.update');

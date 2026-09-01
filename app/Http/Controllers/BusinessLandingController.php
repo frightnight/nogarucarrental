@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
+use App\Models\PlatformLandingPage;
 use Illuminate\View\View;
 
 class BusinessLandingController extends Controller
@@ -10,6 +11,7 @@ class BusinessLandingController extends Controller
     public function index(): View
     {
         $businesses = Business::query()
+            ->withCount('cars')
             ->orderBy('created_at', 'desc')
             ->get(['name', 'slug', 'city', 'description']);
 
@@ -20,7 +22,9 @@ class BusinessLandingController extends Controller
             return $business;
         });
 
-        return view('public.businesses', ['businesses' => $businesses]);
+        $content = PlatformLandingPage::query()->first()?->content ?? [];
+
+        return view('public.businesses', compact('businesses', 'content'));
     }
 
     public function show(string $slug): View
@@ -50,6 +54,13 @@ class BusinessLandingController extends Controller
                     'price' => auth()->user()?->hasRole('client') ? $car->rates->map(fn ($rate) => $rate->name.': ₱'.number_format((float) $rate->value, 2))->implode(' · ') : null,
                     // Blade uses `images` array for image slideshow.
                     'images' => $car->images->pluck('image_path')->all(),
+                    'status' => $car->status,
+                    'vehicle_type' => $car->vehicle_type,
+                    'transmission' => $car->transmission,
+                    'seats' => $car->seats,
+                    'rental_type' => $car->rental_type,
+                    'daily_rate' => $car->rates->whereIn('name', ['24hrs', 'Daily'])->min('value') ?? $car->rates->min('value'),
+                    'rate_label' => $car->rates->firstWhere('name', '24hrs') ? '24hrs' : 'day',
                 ];
             })->all(),
             'business_id' => $businessModel->id,

@@ -23,7 +23,14 @@ class MarketplaceSearchTest extends TestCase
             'status' => 'available',
         ]);
         Rate::factory()->for($availableCar)->create(['name' => '24hrs', 'value' => 3800]);
-        Car::factory()->for($otherRental)->create(['car_model' => 'Unavailable Sedan', 'status' => 'maintenance']);
+        $nonMatchingCar = Car::factory()->for($otherRental)->create([
+            'car_model' => 'Naga Sedan',
+            'vehicle_type' => 'Sedan',
+            'transmission' => 'Manual',
+            'seats' => 4,
+            'status' => 'available',
+        ]);
+        Rate::factory()->for($nonMatchingCar)->create(['name' => '24hrs', 'value' => 3000]);
 
         $this->get(route('marketplace.index', [
             'location' => 'Legazpi',
@@ -34,7 +41,19 @@ class MarketplaceSearchTest extends TestCase
         ]))
             ->assertOk()
             ->assertSee('Toyota Fortuner')
-            ->assertDontSee('Unavailable Sedan');
+            ->assertDontSee('Naga Sedan');
+    }
+
+    public function test_visitors_can_search_vehicles_by_make_model_or_type(): void
+    {
+        $business = Business::factory()->create();
+        Car::factory()->for($business)->create(['car_model' => 'Toyota Fortuner', 'vehicle_type' => 'SUV', 'status' => 'available']);
+        Car::factory()->for($business)->create(['car_model' => 'Honda City', 'vehicle_type' => 'Sedan', 'status' => 'available']);
+
+        $this->get(route('marketplace.index', ['search' => 'Fortuner']))
+            ->assertOk()
+            ->assertSee('Toyota Fortuner')
+            ->assertDontSee('Honda City');
     }
 
     public function test_booked_vehicles_are_excluded_for_overlapping_dates(): void
@@ -63,5 +82,39 @@ class MarketplaceSearchTest extends TestCase
         $this->get(route('marketplace.index', ['pickup_date' => '2026-08-11', 'return_date' => '2026-08-13']))
             ->assertOk()
             ->assertDontSee('Booked Fortuner');
+    }
+
+    public function test_max_price_filters_using_the_price_shown_on_the_marketplace(): void
+    {
+        $business = Business::factory()->create();
+        $affordableCar = Car::factory()->for($business)->create(['car_model' => 'Affordable Daily Car', 'status' => 'available']);
+        $expensiveCarWithCheapShortRate = Car::factory()->for($business)->create(['car_model' => 'Expensive Daily Car', 'status' => 'available']);
+        $carWithoutDailyRate = Car::factory()->for($business)->create(['car_model' => 'Short-Term Rate Car', 'status' => 'available']);
+
+        Rate::factory()->for($affordableCar)->create(['name' => '24hrs', 'value' => 3000]);
+        Rate::factory()->for($expensiveCarWithCheapShortRate)->create(['name' => '24hrs', 'value' => 5000]);
+        Rate::factory()->for($expensiveCarWithCheapShortRate)->create(['name' => '12hrs', 'value' => 2500]);
+        Rate::factory()->for($carWithoutDailyRate)->create(['name' => '12hrs', 'value' => 2500]);
+
+        $this->get(route('marketplace.index', ['max_price' => 4000]))
+            ->assertOk()
+            ->assertSee('Affordable Daily Car')
+            ->assertSee('Short-Term Rate Car')
+            ->assertDontSee('Expensive Daily Car');
+    }
+
+    public function test_max_price_of_zero_is_applied(): void
+    {
+        $business = Business::factory()->create();
+        $freeCar = Car::factory()->for($business)->create(['car_model' => 'Free Daily Car', 'status' => 'available']);
+        $paidCar = Car::factory()->for($business)->create(['car_model' => 'Paid Daily Car', 'status' => 'available']);
+
+        Rate::factory()->for($freeCar)->create(['name' => '24hrs', 'value' => 0]);
+        Rate::factory()->for($paidCar)->create(['name' => '24hrs', 'value' => 1]);
+
+        $this->get(route('marketplace.index', ['max_price' => 0]))
+            ->assertOk()
+            ->assertSee('Free Daily Car')
+            ->assertDontSee('Paid Daily Car');
     }
 }

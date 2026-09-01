@@ -11,6 +11,35 @@ use Illuminate\Support\Facades\Auth;
 
 class FleetRateController extends Controller
 {
+    /** @var array<int, string> */
+    public const VEHICLE_RATE_NAMES = [
+        '12hrs',
+        '24hrs',
+        'Extension per hour',
+        'Pick-up & Drop-off',
+        'Car Wash Fee',
+    ];
+
+    public function sync(Request $request, Car $car): RedirectResponse
+    {
+        $this->ensureCarBelongsToBusiness($car);
+        $validated = $request->validate([
+            'rates' => ['required', 'array'],
+            'rates.*' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+        ]);
+
+        foreach (self::VEHICLE_RATE_NAMES as $rateName) {
+            $car->rates()->updateOrCreate(
+                ['name' => $rateName],
+                ['value' => $validated['rates'][$rateName] ?? 0],
+            );
+        }
+
+        $car->rates()->whereNotIn('name', self::VEHICLE_RATE_NAMES)->delete();
+
+        return redirect()->route('business.fleet.edit', $car)->with('success', 'Vehicle rate schedule updated.');
+    }
+
     public function store(Request $request, Car $car): RedirectResponse
     {
         $this->ensureCarBelongsToBusiness($car);
@@ -47,7 +76,7 @@ class FleetRateController extends Controller
     private function validatedRate(Request $request): array
     {
         return $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => ['required', 'string', 'in:'.implode(',', self::VEHICLE_RATE_NAMES)],
             'value' => 'required|numeric|min:0|max:99999999.99',
         ]);
     }
