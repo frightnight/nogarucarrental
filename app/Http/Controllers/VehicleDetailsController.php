@@ -16,6 +16,9 @@ class VehicleDetailsController extends Controller
         $driverDailyRate = (float) $car->business->drivers
             ->first(fn ($driver) => (bool) $driver->pivot->is_default && (bool) $driver->pivot->is_available)?->pivot->daily_rate;
         $carWashFee = (float) ($car->rates->firstWhere('name', 'Car Wash Fee')?->value ?? 0);
+        $twelveHourRate = (float) ($car->rates->firstWhere('name', '12hrs')?->value ?? 0);
+        $twentyFourHourRate = (float) ($car->rates->firstWhere('name', '24hrs')?->value ?? $car->rates->firstWhere('name', 'Daily')?->value ?? 0);
+        $extensionPerHourRate = (float) ($car->rates->firstWhere('name', 'Extension per hour')?->value ?? 0);
         $dailyDiscount = (float) ($car->rates->firstWhere('name', 'Daily Discount')?->value ?? 0);
         $pickupDropoffFee = (float) ($car->rates->firstWhere('name', 'Pick-up & Drop-off')?->value ?? 0);
         $fuelConsumptionKmPerLiter = (float) ($car->fuel_consumption_km_per_liter ?? 0);
@@ -29,6 +32,6 @@ class VehicleDetailsController extends Controller
         $garageLatitude = (float) ($car->business->garage_latitude ?? 0);
         $garageLongitude = (float) ($car->business->garage_longitude ?? 0);
 
-        return view('public.vehicle-details', compact('car', 'driverDailyRate', 'carWashFee', 'dailyDiscount', 'pickupDropoffFee', 'fuelConsumptionKmPerLiter', 'fuelPricePerLiter', 'garageLatitude', 'garageLongitude'));
+        return view('public.vehicle-details', compact('car', 'driverDailyRate', 'carWashFee', 'twelveHourRate', 'twentyFourHourRate', 'extensionPerHourRate', 'dailyDiscount', 'pickupDropoffFee', 'fuelConsumptionKmPerLiter', 'fuelPricePerLiter', 'garageLatitude', 'garageLongitude'));
     }
 }

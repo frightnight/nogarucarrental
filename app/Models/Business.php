@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Business extends Model
 {
@@ -86,5 +87,20 @@ class Business extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(BusinessPaymentMethod::class);
+    }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
+
+    public function savedLocations(): HasMany
+    {
+        return $this->hasMany(SavedLocation::class);
     }
 }

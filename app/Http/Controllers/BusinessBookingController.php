@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\BusinessFeature;
 use App\Models\Booking;
 use App\Models\Business;
+use App\Models\Car;
+use App\Models\User;
 use App\Notifications\BookingFinalizedNotification;
 use App\Notifications\BookingPaymentConfirmedNotification;
 use Illuminate\Http\RedirectResponse;
@@ -14,12 +16,51 @@ use Illuminate\View\View;
 
 class BusinessBookingController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $business = $this->business();
-        $bookings = $business->bookings()->with(['user', 'car'])->latest()->get();
+        $sort = $request->string('sort', 'booking_input')->value();
+        abort_unless(in_array($sort, ['booking_input', 'booking_schedule'], true), 404);
+        $bookingsQuery = $business->bookings()->with(['user', 'car', 'businessPaymentMethod']);
 
-        return view('panels.bookings.index', compact('business', 'bookings'));
+        if ($sort === 'booking_schedule') {
+            $bookingsQuery->orderBy('pickup_date')->orderBy('pickup_time');
+        } else {
+            $bookingsQuery->latest();
+        }
+
+        $bookings = $bookingsQuery->get();
+
+        return view('panels.bookings.index', compact('business', 'bookings', 'sort'));
+    }
+
+    public function calendar(): View
+    {
+        $business = $this->business();
+        $bookings = $business->bookings()
+            ->with('car')
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->orderBy('pickup_date')
+            ->get();
+
+        $events = $bookings->map(function (Booking $booking): array {
+            $start = $booking->pickup_date?->format('Y-m-d').'T'.$booking->pickup_time;
+            $end = $booking->return_date?->format('Y-m-d').'T'.$booking->return_time;
+
+            return [
+                'title' => ($booking->car?->car_model ?: $booking->preferred_vehicle).' · #'.$booking->id,
+                'start' => $start,
+                'end' => $end,
+                'url' => route('business.bookings.edit', $booking),
+                'classNames' => match ($booking->status) {
+                    'confirmed', 'ongoing' => ['bg-success-subtle', 'text-success', 'border-start', 'border-3', 'border-success'],
+                    'payment_submitted' => ['bg-warning-subtle', 'text-warning', 'border-start', 'border-3', 'border-warning'],
+                    default => ['bg-primary-subtle', 'text-primary', 'border-start', 'border-3', 'border-primary'],
+                },
+            ];
+        });
+
+        return view('panels.bookings.calendar', compact('events'));
     }
 
     public function clients(): View
@@ -108,7 +149,7 @@ class BusinessBookingController extends Controller
             'status' => 'finalized',
             'finalized_at' => now(),
         ]);
-        $booking->user->notify(new BookingFinalizedNotification($booking));
+        $booking->user?->notify(new BookingFinalizedNotification($booking));
 
         return redirect()->route('business.bookings.index')->with('success', 'Booking finalized and sent to the client for payment.');
     }
@@ -124,7 +165,7 @@ class BusinessBookingController extends Controller
             'status' => 'confirmed',
             'payment_confirmed_at' => now(),
         ]);
-        $booking->user->notify(new BookingPaymentConfirmedNotification($booking));
+        $booking->user?->notify(new BookingPaymentConfirmedNotification($booking));
 
         return redirect()->route('business.bookings.index')->with('success', 'Reservation payment confirmed and client notified.');
     }

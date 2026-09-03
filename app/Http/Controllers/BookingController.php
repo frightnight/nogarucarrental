@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Business;
 use App\Models\Car;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -56,6 +57,10 @@ class BookingController extends Controller
             return back()->withInput()->withErrors(['car_id' => 'This vehicle is no longer available for the selected dates.']);
         }
 
+        $initialRate = $this->initialRate($car, $validated) ?? 0;
+        $carWashFee = (float) ($car->rates->firstWhere('name', 'Car Wash Fee')?->value ?? 0);
+        $total = round(($initialRate + $carWashFee) * 1.12, 2);
+        $securityDeposit = $this->securityDeposit($total);
         $booking = Booking::create([
             'user_id' => Auth::id(),
             'business_id' => $car->business_id,
@@ -72,11 +77,13 @@ class BookingController extends Controller
             'return_location' => $validated['return_location'] ?? null,
             'handover_option' => $validated['handover_option'] ?? 'not_applicable',
             'handover_other' => $validated['handover_other'] ?? null,
-            'initial_rate' => $this->initialRate($car, $validated),
-            'status' => 'pending_review',
+            'initial_rate' => $initialRate,
+            'final_rate' => $total,
+            'reservation_fee' => $securityDeposit,
+            'status' => 'pending_payment',
         ]);
 
-        return redirect()->route('bookings.review', $booking)->with('status', 'Booking submitted for business review.');
+        return redirect()->route('bookings.payment', $booking);
     }
 
     public function review(Booking $booking): View
@@ -88,23 +95,28 @@ class BookingController extends Controller
 
     public function payment(Booking $booking): View
     {
-        abort_unless($booking->user_id === Auth::id() && $booking->status === 'finalized', 403);
+        abort_unless($booking->user_id === Auth::id() && in_array($booking->status, ['finalized', 'pending_payment'], true), 403);
 
-        return view('public.booking-payment', compact('booking'));
+        $paymentMethods = $booking->business->paymentMethods()->get();
+
+        return view('public.booking-payment', compact('booking', 'paymentMethods'));
     }
 
     public function storePayment(Request $request, Booking $booking): RedirectResponse
     {
-        abort_unless($booking->user_id === Auth::id() && $booking->status === 'finalized', 403);
+        abort_unless($booking->user_id === Auth::id() && in_array($booking->status, ['finalized', 'pending_payment'], true), 403);
 
         $validated = $request->validate([
-            'payment_method' => ['required', 'in:gcash,paymaya,bank_transaction'],
-            'payment_proof' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'business_payment_method_id' => ['required', 'integer'],
+            'payment_reference_number' => ['required', 'string', 'max:100'],
+            'payment_proof' => ['required', 'file', 'mimes:jpeg,png,jpg,webp,pdf', 'max:5120'],
             'special_request' => ['nullable', 'string', 'max:2000'],
             'flight_details' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
         ]);
 
         $paymentProof = $request->file('payment_proof');
+
+        $paymentMethod = $booking->business->paymentMethods()->findOrFail($validated['business_payment_method_id']);
 
         if (! $paymentProof instanceof UploadedFile || ! $paymentProof->isValid() || ! is_file($paymentProof->getPathname())) {
             return back()
@@ -124,7 +136,9 @@ class BookingController extends Controller
         }
 
         $booking->update([
-            'payment_method' => $validated['payment_method'],
+            'payment_method' => $paymentMethod->payment_method,
+            'business_payment_method_id' => $paymentMethod->id,
+            'payment_reference_number' => $validated['payment_reference_number'],
             'payment_proof_path' => '/storage/'.$path,
             'payment_submitted_at' => now(),
             'special_request' => $validated['special_request'] ?? null,
@@ -144,8 +158,12 @@ class BookingController extends Controller
             return null;
         }
 
-        $rateName = $validated['pickup_date'] === $validated['return_date'] ? '12hrs' : '24hrs';
-        $amount = (float) ($car->rates->firstWhere('name', $rateName)?->value ?? 0);
+        $pickupAt = Carbon::parse($validated['pickup_date'].' '.$validated['pickup_time']);
+        $returnAt = Carbon::parse(($validated['return_date'] ?? $validated['pickup_date']).' '.($validated['return_time'] ?? $validated['pickup_time']));
+        $rentalMinutes = $pickupAt->diffInMinutes($returnAt);
+        $rateName = $rentalMinutes <= 720 ? '12hrs' : '24hrs';
+        $rentalPeriods = $rentalMinutes <= 720 ? 1 : max(1, (int) ceil($rentalMinutes / 1440));
+        $amount = (float) ($car->rates->firstWhere('name', $rateName)?->value ?? 0) * $rentalPeriods;
         $itinerary = strtolower($validated['destination_itinerary']);
 
         if (str_contains($itinerary, 'sorsogon') || str_contains($itinerary, 'cam sur') || str_contains($itinerary, 'camsur')) {
@@ -153,6 +171,11 @@ class BookingController extends Controller
         }
 
         return $amount ?: null;
+    }
+
+    private function securityDeposit(float $total): float
+    {
+        return round(($total * 0.2) / 100) * 100;
     }
 
     private function storeImage(UploadedFile $file, string $directory): string

@@ -35,6 +35,8 @@
                 @endif
                 @if(auth()->user()->hasAnyRole(['business_owner', 'booker', 'agent']))
                     <li class="side-nav-item"><a href="{{ route('business.bookings.index') }}" class="side-nav-link"><i class="ti ti-calendar-check"></i><span>Bookings</span></a></li>
+                    <li class="side-nav-item"><a href="{{ route('business.bookings.calendar') }}" class="side-nav-link"><i class="ti ti-calendar-month"></i><span>Booking Calendar</span></a></li>
+                    <li class="side-nav-item"><a href="{{ route('business.quotations.index') }}" class="side-nav-link"><i class="ti ti-file-invoice"></i><span>Quotation</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.clients.index') }}" class="side-nav-link"><i class="ti ti-users"></i><span>Clients</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.fleet.index') }}" class="side-nav-link"><i class="ti ti-steering-wheel"></i><span>Fleet</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.drivers.index') }}" class="side-nav-link"><i class="ti ti-id-badge-2"></i><span>Drivers</span></a></li>
@@ -42,6 +44,7 @@
                     <li class="side-nav-item"><a href="{{ route('business.bookings.create') }}" class="side-nav-link"><i class="ti ti-calendar-plus"></i><span>New Booking</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.reports') }}" class="side-nav-link"><i class="ti ti-chart-bar"></i><span>Reports</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.plan') }}" class="side-nav-link"><i class="ti ti-credit-card"></i><span>Plan & Billing</span></a></li>
+                    <li class="side-nav-item"><a href="{{ route('business.payment-methods.index') }}" class="side-nav-link"><i class="ti ti-wallet"></i><span>Payment Methods</span></a></li>
                     <li class="side-nav-item"><a href="{{ route('business.landing.content.edit') }}" class="side-nav-link"><i class="ti ti-world"></i><span>Landing Page</span></a></li>
                 @endif
                 @if(auth()->user()->hasRole('administrator'))

@@ -14,6 +14,10 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'guest_token',
+        'guest_first_name',
+        'guest_last_name',
+        'guest_email',
+        'guest_phone',
         'business_id',
         'car_id',
         'driver_license_number',
@@ -45,6 +49,8 @@ class Booking extends Model
         'flight_details_path',
         'finalized_at',
         'payment_method',
+        'business_payment_method_id',
+        'payment_reference_number',
         'payment_proof_path',
         'payment_submitted_at',
         'payment_confirmed_at',
@@ -89,6 +95,11 @@ class Booking extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class, 'driver_license_number', 'license_number');
+    }
+
+    public function businessPaymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(BusinessPaymentMethod::class);
     }
 
     public function inspections(): HasMany
