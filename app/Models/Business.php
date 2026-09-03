@@ -103,4 +103,9 @@ class Business extends Model
     {
         return $this->hasMany(SavedLocation::class);
     }
+
+    public function quotationFootnotes(): HasMany
+    {
+        return $this->hasMany(QuotationFootnote::class);
+    }
 }

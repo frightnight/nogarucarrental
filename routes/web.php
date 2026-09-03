@@ -66,6 +66,9 @@ Route::middleware('auth')->group(function () {
     Route::post('business/quotations/saved-locations', [BusinessQuotationController::class, 'storeSavedLocation'])->middleware('role:business_owner|booker|agent')->name('business.quotations.saved-locations.store');
     Route::put('business/quotations/saved-locations/{savedLocation}', [BusinessQuotationController::class, 'updateSavedLocation'])->middleware('role:business_owner|booker|agent')->name('business.quotations.saved-locations.update');
     Route::delete('business/quotations/saved-locations/{savedLocation}', [BusinessQuotationController::class, 'destroySavedLocation'])->middleware('role:business_owner|booker|agent')->name('business.quotations.saved-locations.destroy');
+    Route::post('business/quotations/footnotes', [BusinessQuotationController::class, 'storeFootnote'])->middleware('role:business_owner|booker|agent')->name('business.quotations.footnotes.store');
+    Route::put('business/quotations/footnotes/{footnote}', [BusinessQuotationController::class, 'updateFootnote'])->middleware('role:business_owner|booker|agent')->name('business.quotations.footnotes.update');
+    Route::delete('business/quotations/footnotes/{footnote}', [BusinessQuotationController::class, 'destroyFootnote'])->middleware('role:business_owner|booker|agent')->name('business.quotations.footnotes.destroy');
     Route::put('business/quotations/{quotation}', [BusinessQuotationController::class, 'update'])->middleware('role:business_owner|booker|agent')->name('business.quotations.update');
     Route::delete('business/quotations/{quotation}', [BusinessQuotationController::class, 'destroy'])->middleware('role:business_owner|booker|agent')->name('business.quotations.destroy');
     Route::get('business/quotations/{quotation}', [BusinessQuotationController::class, 'show'])->middleware('role:business_owner|booker|agent')->name('business.quotations.show');

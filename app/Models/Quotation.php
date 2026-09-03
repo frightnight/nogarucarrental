@@ -11,11 +11,20 @@ class Quotation extends Model
         'business_id',
         'car_id',
         'driver_license_number',
+        'quotation_footnote_id',
         'quotation_number',
         'title',
         'client_name',
         'package_type',
         'itinerary',
+        'other_payments',
+        'itinerary_start_address',
+        'itinerary_start_latitude',
+        'itinerary_start_longitude',
+        'itinerary_end_address',
+        'itinerary_end_latitude',
+        'itinerary_end_longitude',
+        'footnote_content',
         'total_distance_km',
         'vehicle_rate',
         'driver_rate',
@@ -27,6 +36,11 @@ class Quotation extends Model
     {
         return [
             'itinerary' => 'array',
+            'other_payments' => 'array',
+            'itinerary_start_latitude' => 'decimal:7',
+            'itinerary_start_longitude' => 'decimal:7',
+            'itinerary_end_latitude' => 'decimal:7',
+            'itinerary_end_longitude' => 'decimal:7',
             'total_distance_km' => 'decimal:2',
             'vehicle_rate' => 'decimal:2',
             'driver_rate' => 'decimal:2',
@@ -48,5 +62,10 @@ class Quotation extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class, 'driver_license_number', 'license_number');
+    }
+
+    public function footnote(): BelongsTo
+    {
+        return $this->belongsTo(QuotationFootnote::class, 'quotation_footnote_id');
     }
 }
