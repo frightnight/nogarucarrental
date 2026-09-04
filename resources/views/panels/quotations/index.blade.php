@@ -62,7 +62,7 @@
             const garage = { lat: Number(@json($business->garage_latitude ?? 13.1391)), lng: Number(@json($business->garage_longitude ?? 123.7438)) };
             const decodeBase64 = (content) => new TextDecoder().decode(Uint8Array.from(atob(content), character => character.charCodeAt(0)));
             const footnoteContent = document.getElementById('quotation-footnote-content');
-            const editorOptions = { theme: 'snow', modules: { toolbar: [['bold', 'italic', 'underline', 'strike'], [{ header: [1, 2, 3, false] }], [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote', 'link'], ['clean']] } };
+            const editorOptions = { theme: 'snow', modules: { toolbar: [[{ font: [] }, { size: ['small', false, 'large', 'huge'] }], ['bold', 'italic', 'underline', 'strike'], [{ color: [] }], [{ header: [1, 2, 3, false] }, { align: [] }], [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote', 'link'], ['clean']] } };
             const footnoteEditor = new Quill('#quotation-footnote-editor', editorOptions);
             footnoteEditor.clipboard.dangerouslyPasteHTML(footnoteContent.value);
             footnoteEditor.on('text-change', () => footnoteContent.value = footnoteEditor.root.innerHTML === '<p><br></p>' ? '' : footnoteEditor.root.innerHTML);
