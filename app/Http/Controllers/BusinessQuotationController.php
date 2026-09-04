@@ -141,8 +141,10 @@ class BusinessQuotationController extends Controller
     {
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'quotation_date' => ['required', 'date'],
             'client_name' => ['nullable', 'string', 'max:255'],
             'car_id' => ['required', 'integer'],
+            'vehicle_rate_name' => ['required', 'string', 'max:100'],
             'driver_license_number' => ['nullable', 'string', 'max:100'],
             'package_type' => ['required', 'in:all_in,all_out'],
             'itinerary' => ['required', 'array', 'min:1', 'max:20'],
@@ -159,6 +161,7 @@ class BusinessQuotationController extends Controller
             'other_payments' => ['nullable', 'array', 'max:50'],
             'other_payments.*.name' => ['required', 'string', 'max:100'],
             'other_payments.*.amount' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
+            'hidden_charges' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
             'quotation_footnote_id' => ['nullable', 'integer'],
             'footnote_content' => ['nullable', 'string', 'max:30000'],
             'total_distance_km' => ['required', 'numeric', 'min:0', 'max:999999.99'],
@@ -193,7 +196,9 @@ class BusinessQuotationController extends Controller
             $driver = $business->drivers()->wherePivot('is_available', true)->whereKey($validated['driver_license_number'])->firstOrFail();
         }
 
-        $vehicleRate = (float) ($car->rates->firstWhere('name', '24hrs')?->value ?? $car->rates->firstWhere('name', 'Daily')?->value ?? 0);
+        $vehicleRateRecord = $car->rates->firstWhere('name', $validated['vehicle_rate_name']);
+        abort_unless($vehicleRateRecord, 422, 'The selected vehicle rate is not available for this vehicle.');
+        $vehicleRate = (float) $vehicleRateRecord->value;
         $driverRate = (float) ($driver?->pivot->daily_rate ?? 0);
         $rawDistanceRate = $validated['package_type'] === 'all_in' ? $this->fuelCost($car, (float) $validated['total_distance_km']) : 0;
         $distanceRate = $rawDistanceRate > 0 ? ceil($rawDistanceRate / 100) * 100 : 0;
@@ -202,6 +207,7 @@ class BusinessQuotationController extends Controller
             'amount' => round((float) $payment['amount'], 2),
         ])->values()->all();
         $otherPaymentsTotal = collect($otherPayments)->sum('amount');
+        $hiddenCharges = round((float) ($validated['hidden_charges'] ?? 0), 2);
         $footnote = null;
         if ($validated['quotation_footnote_id'] ?? null) {
             $footnote = $business->quotationFootnotes()->findOrFail($validated['quotation_footnote_id']);
@@ -209,12 +215,15 @@ class BusinessQuotationController extends Controller
 
         $quotation->fill([
             'car_id' => $car->id,
+            'quotation_date' => $validated['quotation_date'],
+            'vehicle_rate_name' => $vehicleRateRecord->name,
             'driver_license_number' => $driver?->license_number,
             'title' => $validated['title'],
             'client_name' => $validated['client_name'] ?? null,
             'package_type' => $validated['package_type'],
             'itinerary' => $validated['itinerary'],
             'other_payments' => $otherPayments,
+            'hidden_charges' => $hiddenCharges,
             'itinerary_start_address' => $validated['itinerary_start_address'],
             'itinerary_start_latitude' => $validated['itinerary_start_latitude'],
             'itinerary_start_longitude' => $validated['itinerary_start_longitude'],
@@ -227,7 +236,7 @@ class BusinessQuotationController extends Controller
             'vehicle_rate' => $vehicleRate,
             'driver_rate' => $driverRate,
             'distance_rate' => $distanceRate,
-            'total_amount' => $vehicleRate + $driverRate + $distanceRate + $otherPaymentsTotal,
+            'total_amount' => $vehicleRate + $driverRate + $distanceRate + $otherPaymentsTotal + $hiddenCharges,
         ]);
     }
 
