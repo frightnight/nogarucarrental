@@ -11,6 +11,8 @@ use App\Models\ClientIdentityDocument;
 use App\Models\ClientProfile;
 use App\Models\Driver;
 use App\Models\PlatformLandingPage;
+use App\Models\Quotation;
+use App\Models\QuotationFootnote;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
@@ -83,6 +85,7 @@ class CarRentalDemoSeeder extends Seeder
 
         $this->seedClient();
         $this->seedDriverBookings();
+        $this->seedQuotations();
         $this->seedAdministrator();
     }
 
@@ -313,6 +316,71 @@ class CarRentalDemoSeeder extends Seeder
                     ],
                 );
             }
+        });
+    }
+
+    private function seedQuotations(): void
+    {
+        Business::query()->with(['cars.rates', 'drivers'])->each(function (Business $business): void {
+            $car = $business->cars->first();
+            $driver = $business->drivers->first(fn (Driver $driver): bool => (bool) $driver->pivot->is_default);
+
+            if (! $car instanceof Car || ! $driver instanceof Driver) {
+                return;
+            }
+
+            $vehicleRate = $car->rates->firstWhere('name', '24hrs') ?? $car->rates->first();
+            if ($vehicleRate === null) {
+                return;
+            }
+
+            $otherPayments = [
+                ['name' => 'Airport pickup', 'amount' => 500],
+                ['name' => 'Additional insurance', 'amount' => 350],
+            ];
+            $hiddenCharges = 250;
+            $vehicleRateAmount = (float) $vehicleRate->value;
+            $driverRate = (float) $driver->pivot->daily_rate;
+            $distanceRate = 900;
+            $totalAmount = $vehicleRateAmount + $driverRate + $distanceRate + collect($otherPayments)->sum('amount') + $hiddenCharges;
+
+            $footnote = QuotationFootnote::updateOrCreate(
+                ['business_id' => $business->id, 'title' => 'Standard quotation terms'],
+                ['content' => 'Rates are subject to vehicle availability. A valid license and identification are required before release.'],
+            );
+
+            Quotation::updateOrCreate(
+                ['quotation_number' => 'QT-DEMO-'.strtoupper($business->slug)],
+                [
+                    'business_id' => $business->id,
+                    'car_id' => $car->id,
+                    'driver_license_number' => $driver->license_number,
+                    'quotation_footnote_id' => $footnote->id,
+                    'quotation_date' => now()->toDateString(),
+                    'title' => 'Legazpi city tour package',
+                    'client_name' => 'Jordan Dela Cruz',
+                    'package_type' => 'all_in',
+                    'itinerary' => [
+                        ['title' => 'Pickup', 'address' => 'Legazpi Airport, Albay', 'latitude' => 13.1575, 'longitude' => 123.7351],
+                        ['title' => 'Destination', 'address' => 'Cagsawa Ruins, Daraga, Albay', 'latitude' => 13.1412, 'longitude' => 123.7061],
+                    ],
+                    'other_payments' => $otherPayments,
+                    'hidden_charges' => $hiddenCharges,
+                    'itinerary_start_address' => 'Legazpi Airport, Albay',
+                    'itinerary_start_latitude' => 13.1575,
+                    'itinerary_start_longitude' => 123.7351,
+                    'itinerary_end_address' => 'Cagsawa Ruins, Daraga, Albay',
+                    'itinerary_end_latitude' => 13.1412,
+                    'itinerary_end_longitude' => 123.7061,
+                    'footnote_content' => $footnote->content,
+                    'total_distance_km' => 38.5,
+                    'vehicle_rate_name' => $vehicleRate->name,
+                    'vehicle_rate' => $vehicleRateAmount,
+                    'driver_rate' => $driverRate,
+                    'distance_rate' => $distanceRate,
+                    'total_amount' => $totalAmount,
+                ],
+            );
         });
     }
 }
