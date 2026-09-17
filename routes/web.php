@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminDriverController;
 use App\Http\Controllers\AdminPlatformLandingController;
+use App\Http\Controllers\AdminSalesAgentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\SocialAuthenticationController;
@@ -12,11 +14,14 @@ use App\Http\Controllers\BusinessLandingContentController;
 use App\Http\Controllers\BusinessLandingController;
 use App\Http\Controllers\BusinessPaymentMethodController;
 use App\Http\Controllers\BusinessPlanController;
+use App\Http\Controllers\BusinessProfileController;
 use App\Http\Controllers\BusinessQuotationController;
 use App\Http\Controllers\ClientDashboardController;
 use App\Http\Controllers\ClientProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\DriverPortalController;
+use App\Http\Controllers\DriverRegistrationController;
 use App\Http\Controllers\FleetController;
 use App\Http\Controllers\FleetRateController;
 use App\Http\Controllers\GuestCheckoutController;
@@ -24,6 +29,8 @@ use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\PartnerFleetController;
 use App\Http\Controllers\PublicLandingController;
 use App\Http\Controllers\RentalManagementController;
+use App\Http\Controllers\SalesAgentController;
+use App\Http\Controllers\SalesAgentRegistrationController;
 use App\Http\Controllers\VehicleDetailsController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +49,12 @@ Route::middleware('guest')->group(function () {
     Route::post('register', [RegisteredUserController::class, 'store']);
     Route::get('register/business', [RegisteredUserController::class, 'createBusiness'])->name('business.register');
     Route::post('register/business', [RegisteredUserController::class, 'storeBusiness'])->name('business.register.store');
+    Route::get('register/driver', [DriverRegistrationController::class, 'create'])->name('driver.register');
+    Route::post('register/driver', [DriverRegistrationController::class, 'store'])->name('driver.register.store');
+    Route::get('register/driver/success/{driver}', [DriverRegistrationController::class, 'success'])->name('driver.registration.success');
+    Route::get('register/sales-agent', [SalesAgentRegistrationController::class, 'create'])->name('sales-agent.register');
+    Route::post('register/sales-agent', [SalesAgentRegistrationController::class, 'store'])->name('sales-agent.register.store');
+    Route::get('register/sales-agent/success', [SalesAgentRegistrationController::class, 'success'])->name('sales-agent.registration.success');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
@@ -55,11 +68,25 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('admin', [AdminDashboardController::class, 'index'])->middleware('role:administrator|moderator')->name('admin.dashboard');
+    Route::get('admin/drivers', [AdminDriverController::class, 'index'])->middleware('role:administrator')->name('admin.drivers.index');
+    Route::put('admin/drivers/{driver}/approve', [AdminDriverController::class, 'approve'])->middleware('role:administrator')->name('admin.drivers.approve');
+    Route::put('admin/drivers/{driver}/reject', [AdminDriverController::class, 'reject'])->middleware('role:administrator')->name('admin.drivers.reject');
+    Route::get('admin/sales-agents', [AdminSalesAgentController::class, 'index'])->middleware('role:administrator')->name('admin.sales-agents.index');
+    Route::post('admin/sales-agents', [AdminSalesAgentController::class, 'store'])->middleware('role:administrator')->name('admin.sales-agents.store');
+    Route::put('admin/sales-agents/{user}/toggle', [AdminSalesAgentController::class, 'toggle'])->middleware('role:administrator')->name('admin.sales-agents.toggle');
+    Route::put('admin/sales-agents/{user}/approve', [AdminSalesAgentController::class, 'approve'])->middleware('role:administrator')->name('admin.sales-agents.approve');
+    Route::put('admin/sales-agents/{user}/reject', [AdminSalesAgentController::class, 'reject'])->middleware('role:administrator')->name('admin.sales-agents.reject');
+    Route::put('admin/sales-commissions/{commission}/approve', [AdminSalesAgentController::class, 'approveCommission'])->middleware('role:administrator')->name('admin.sales-commissions.approve');
     Route::get('admin/landing-page', [AdminPlatformLandingController::class, 'edit'])->middleware('role:administrator')->name('admin.landing.edit');
     Route::put('admin/landing-page', [AdminPlatformLandingController::class, 'update'])->middleware('role:administrator')->name('admin.landing.update');
     Route::get('admin/business-plans', [BusinessPlanController::class, 'adminIndex'])->middleware('role:administrator')->name('admin.business-plans.index');
     Route::put('admin/business-plans/{business}', [BusinessPlanController::class, 'update'])->middleware('role:administrator')->name('admin.business-plans.update');
     Route::get('business', [BusinessDashboardController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.dashboard');
+    Route::get('business/profile', [BusinessProfileController::class, 'create'])->middleware('role:business_owner|booker|agent')->name('business.profile.create');
+    Route::post('business/profile', [BusinessProfileController::class, 'store'])->middleware('role:business_owner|booker|agent')->name('business.profile.store');
+    Route::get('business/profile/manage', [BusinessProfileController::class, 'edit'])->middleware('role:business_owner|booker|agent')->name('business.profile.edit');
+    Route::put('business/profile/manage', [BusinessProfileController::class, 'update'])->middleware('role:business_owner|booker|agent')->name('business.profile.update');
+    Route::delete('business/profile/permits', [BusinessProfileController::class, 'destroyPermit'])->middleware('role:business_owner|booker|agent')->name('business.profile.permits.destroy');
     Route::get('business/plan', [BusinessPlanController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.plan');
     Route::get('business/quotations', [BusinessQuotationController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.quotations.index');
     Route::post('business/quotations', [BusinessQuotationController::class, 'store'])->middleware('role:business_owner|booker|agent')->name('business.quotations.store');
@@ -114,18 +141,15 @@ Route::middleware('auth')->group(function () {
     Route::get('business/drivers', [DriverController::class, 'index'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.drivers.index');
-    Route::post('business/drivers', [DriverController::class, 'store'])
-        ->middleware('role:business_owner|booker|agent')
-        ->name('business.drivers.store');
     Route::get('business/drivers/{driver}', [DriverController::class, 'show'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.drivers.show');
-    Route::put('business/drivers/{driver}', [DriverController::class, 'update'])
+    Route::post('business/bookings/{booking}/driver-applications/{application}/select', [BusinessBookingController::class, 'selectDriverApplication'])
         ->middleware('role:business_owner|booker|agent')
-        ->name('business.drivers.update');
-    Route::delete('business/drivers/{driver}', [DriverController::class, 'destroy'])
+        ->name('business.bookings.driver-applications.select');
+    Route::post('business/bookings/{booking}/driver-evaluation', [BusinessBookingController::class, 'evaluateDriver'])
         ->middleware('role:business_owner|booker|agent')
-        ->name('business.drivers.destroy');
+        ->name('business.bookings.driver-evaluation');
     Route::get('business/fleet/create', [FleetController::class, 'create'])
         ->middleware('role:business_owner|booker|agent')
         ->name('business.fleet.create');
@@ -170,12 +194,23 @@ Route::middleware('auth')->group(function () {
     Route::post('bookings/{booking}/payment', [BookingController::class, 'storePayment'])->middleware('role:client')->name('bookings.payment.store');
     Route::get('business/bookings', [BusinessBookingController::class, 'index'])->middleware('role:business_owner|booker|agent')->name('business.bookings.index');
     Route::get('business/bookings/calendar', [BusinessBookingController::class, 'calendar'])->middleware('role:business_owner|booker|agent')->name('business.bookings.calendar');
+    Route::get('business/crm', [BusinessBookingController::class, 'crm'])->middleware('role:business_owner|booker|agent')->name('business.crm');
     Route::get('business/clients', [BusinessBookingController::class, 'clients'])->middleware('role:business_owner|booker|agent')->name('business.clients.index');
     Route::get('business/clients/{client}', [BusinessBookingController::class, 'showClient'])->middleware('role:business_owner|booker|agent')->name('business.clients.show');
     Route::get('business/bookings/{booking}/edit', [BusinessBookingController::class, 'edit'])->middleware('role:business_owner|booker|agent')->name('business.bookings.edit');
     Route::put('business/bookings/{booking}', [BusinessBookingController::class, 'update'])->middleware('role:business_owner|booker|agent')->name('business.bookings.update');
     Route::put('business/bookings/{booking}/payment/confirm', [BusinessBookingController::class, 'confirmPayment'])->middleware('role:business_owner|booker|agent')->name('business.bookings.payment.confirm');
     Route::put('business/bookings/{booking}/status', [BusinessBookingController::class, 'updateStatus'])->middleware('role:business_owner|booker|agent')->name('business.bookings.status.update');
+    Route::get('driver', [DriverPortalController::class, 'index'])->middleware('role:driver')->name('driver.dashboard');
+    Route::post('driver/rates', [DriverPortalController::class, 'storeRate'])->middleware('role:driver')->name('driver.rates.store');
+    Route::delete('driver/rates/{rate}', [DriverPortalController::class, 'destroyRate'])->middleware('role:driver')->name('driver.rates.destroy');
+    Route::post('driver/bookings/{booking}/apply', [DriverPortalController::class, 'apply'])->middleware('role:driver')->name('driver.bookings.apply');
+    Route::get('sales-agent', [SalesAgentController::class, 'index'])->middleware('role:sales_agent')->name('sales-agent.dashboard');
+    Route::post('sales-agent/leads', [SalesAgentController::class, 'storeLead'])->middleware('role:sales_agent')->name('sales-agent.leads.store');
+    Route::put('sales-agent/leads/{lead}', [SalesAgentController::class, 'updateLead'])->middleware('role:sales_agent')->name('sales-agent.leads.update');
+    Route::post('sales-agent/leads/{lead}/quotation', [SalesAgentController::class, 'createQuotation'])->middleware('role:sales_agent')->name('sales-agent.leads.quotation');
+    Route::post('sales-agent/leads/{lead}/reservation', [SalesAgentController::class, 'createReservation'])->middleware('role:sales_agent')->name('sales-agent.leads.reservation');
+    Route::post('sales-agent/leads/{lead}/convert', [SalesAgentController::class, 'convertLead'])->middleware('role:sales_agent')->name('sales-agent.leads.convert');
 
     Route::get('connect/{provider}', [SocialAuthenticationController::class, 'connectRedirect'])->name('social.connect.redirect');
     Route::get('connect/{provider}/callback', [SocialAuthenticationController::class, 'connectCallback'])->name('social.connect.callback');

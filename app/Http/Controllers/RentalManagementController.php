@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Business;
 use App\Models\User;
 use App\Models\VehicleInspection;
+use App\Services\DriverBookingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -42,7 +43,7 @@ class RentalManagementController extends Controller
         ]);
     }
 
-    public function storeBooking(Request $request): RedirectResponse
+    public function storeBooking(Request $request, DriverBookingService $bookingService): RedirectResponse
     {
         $business = $this->business();
         $validated = $request->validate([
@@ -54,12 +55,13 @@ class RentalManagementController extends Controller
         ]);
         $car = $business->cars()->findOrFail($validated['car_id']);
 
-        Booking::create($validated + [
+        $booking = Booking::create($validated + [
             'business_id' => $business->id, 'rental_type' => 'self_drive', 'preferred_vehicle' => $car->car_model ?: $car->vehicle_type,
             'passengers_count' => 1, 'handover_option' => 'manual', 'return_location' => $validated['return_location'] ?? $validated['pickup_location'],
             'destination_itinerary' => $validated['destination_itinerary'] ?? 'Not specified', 'initial_rate' => $validated['final_rate'],
             'reservation_fee' => 0, 'delivery_fee' => 0, 'pickup_fee' => 0, 'status' => 'reserved',
         ]);
+        $bookingService->notifyEligibleDrivers($booking);
 
         return redirect()->route('business.bookings.index')->with('success', 'Manual booking created.');
     }

@@ -9,8 +9,9 @@
     <style>
         .quotation-intro-grid { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
         .quotation-address { font-size: 80%; }
+        .quotation-footnote-content { font-size: 60%; }
         @media (max-width: 767.98px) { .quotation-intro-grid { grid-template-columns: 1fr; } }
-        @media print { html { font-size: 80%; } .app-topbar, .app-menu, .page-title-box, .footer { display: none !important; } .content-page { margin-left: 0 !important; } .card { border: 0 !important; box-shadow: none !important; } }
+        @media print { html { font-size: 80%; } .app-topbar, .app-menu, .page-title-box, .footer { display: none !important; } .content-page { margin-left: 0 !important; } .card { border: 0 !important; box-shadow: none !important; } .quotation-footnote-content { font-size: 60% !important; } }
     </style>
     <div class="card"><div class="card-body p-md-5">
         <div class="d-flex justify-content-between mb-3"><div><h2 class="mb-1">{{ $quotation->business->name }}</h2><p class="text-muted mb-0">Car rental quotation</p></div><div class="text-end"><h4 class="mb-1">{{ $quotation->quotation_number }}</h4><p class="text-muted mb-0">Quotation date: {{ $quotation->quotation_date?->format('M d, Y') ?? $quotation->created_at->format('M d, Y') }}</p></div></div>
@@ -20,7 +21,7 @@
         </div>
         <h5>Itinerary</h5><ol class="mb-4">@foreach($quotation->itinerary as $stop)<li class="mb-2">@if(!empty($stop['title']))<strong class="d-block">{{ $stop['title'] }}</strong>@endif<span class="quotation-address">{{ \Illuminate\Support\Str::limit($stop['address'], 50, '...') }}</span></li>@endforeach</ol>
         @if(!empty($quotation->other_payments))<h5>Other Payments</h5><ol class="mb-4">@foreach($quotation->other_payments as $payment)<li class="mb-1"><span>{{ $payment['name'] }}</span><strong class="float-end">₱{{ number_format((float) $payment['amount'], 2) }}</strong></li>@endforeach</ol>@endif
-        @if($quotation->footnote_content)<div class="border-top pt-4 mb-4"><div class="ql-editor p-0">{!! $quotation->footnote_content !!}</div></div>@endif
+        @if($quotation->footnote_content)<div class="border-top pt-4 mb-4"><div class="quotation-footnote-content p-0">{!! $quotation->footnote_content !!}</div></div>@endif
         @php($otherPaymentsTotal = collect($quotation->other_payments ?? [])->sum(fn (array $payment): float => (float) ($payment['amount'] ?? 0)))
         @php($displayVehicleRate = (float) $quotation->vehicle_rate + (float) $quotation->driver_rate + (float) $quotation->distance_rate + $otherPaymentsTotal + (float) $quotation->hidden_charges)
         <div class="row justify-content-end"><div class="col-md-6"><div class="border rounded p-3"><div class="d-flex justify-content-between mb-2"><span>Vehicle rate</span><strong>₱{{ number_format($displayVehicleRate, 2) }}</strong></div><div class="d-flex justify-content-between mb-3"><span>Total itinerary distance</span><strong>{{ number_format((float) $quotation->total_distance_km, 2) }} km</strong></div><div class="d-flex justify-content-between mb-2"><span>Others</span><strong>₱{{ number_format($otherPaymentsTotal, 2) }}</strong></div><hr><div class="d-flex justify-content-between fs-4"><strong>Total amount</strong><strong>₱{{ number_format((float) $quotation->total_amount, 2) }}</strong></div></div></div></div>

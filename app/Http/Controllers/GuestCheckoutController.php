@@ -81,10 +81,7 @@ class GuestCheckoutController extends Controller
             'guest_token' => (string) Str::uuid(),
             'business_id' => $car->business_id,
             'car_id' => $car->id,
-            'driver_license_number' => $car->business->drivers()
-                ->wherePivot('is_default', true)
-                ->wherePivot('is_available', true)
-                ->value('drivers.license_number'),
+            'driver_license_number' => null,
             'rental_type' => 'with_driver',
             'pickup_date' => $pickupAt->toDateString(),
             'pickup_time' => $pickupAt->format('H:i'),

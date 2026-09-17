@@ -23,6 +23,14 @@ class DashboardController extends Controller
             return redirect()->route('client.dashboard');
         }
 
+        if ($user && $user->hasRole('driver')) {
+            return redirect()->route('driver.dashboard');
+        }
+
+        if ($user && $user->hasRole('sales_agent') && $user->sales_agent_status === 'approved') {
+            return redirect()->route('sales-agent.dashboard');
+        }
+
         return view('dashboard');
     }
 }

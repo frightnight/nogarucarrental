@@ -90,7 +90,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('business.dashboard');
+        return redirect()->route('business.profile.create');
     }
 
     private function availableBusinessSlug(string $businessName): string

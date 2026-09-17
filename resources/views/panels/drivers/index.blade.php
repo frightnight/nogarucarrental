@@ -1,42 +1,36 @@
 @extends('layouts.theme')
 
-@section('title', 'Drivers | Nogaru Car Rental')
-@section('page-title', 'Drivers')
-@section('content')
-    <div class="page-title-box"><div class="page-title-right"><a href="{{ route('business.fleet.index') }}" class="btn btn-outline-secondary btn-sm"><i class="ti ti-car me-1"></i>Fleet</a></div><h4 class="page-title">Business Drivers</h4><p class="text-muted mb-0">Add a driver by licence number. Drivers already registered by another business are reused.</p></div>
-    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    <div class="row g-4">
-        <div class="col-lg-4"><div class="card"><div class="card-header"><h5 class="mb-0">Add or hire a driver</h5></div><div class="card-body"><form method="POST" action="{{ route('business.drivers.store') }}">@csrf
-            <div class="mb-3"><label for="license-number" class="form-label">Driver's licence number</label><input id="license-number" name="license_number" class="form-control" value="{{ old('license_number') }}" list="available-driver-licences" required><datalist id="available-driver-licences">@foreach($availableExternalDrivers as $driver)<option value="{{ $driver->license_number }}">{{ $driver->full_name }}</option>@endforeach</datalist><div class="form-text">Used as the unique driver ID across all businesses.</div></div>
-            <div class="mb-3"><label for="full-name" class="form-label">Full name</label><input id="full-name" name="full_name" class="form-control" value="{{ old('full_name') }}"><div class="form-text">Required only for a new licence. Existing available drivers are reused.</div></div>
-            <div class="mb-3"><label for="phone" class="form-label">Phone <span class="text-muted">(new driver only)</span></label><input id="phone" name="phone" class="form-control" value="{{ old('phone') }}"></div>
-            <div class="mb-3"><label for="email" class="form-label">Email <span class="text-muted">(new driver only)</span></label><input id="email" type="email" name="email" class="form-control" value="{{ old('email') }}"></div>
-            <div class="mb-3"><label for="daily-rate" class="form-label">Your daily driver rate (₱)</label><input id="daily-rate" type="number" name="daily_rate" class="form-control" min="0" step="0.01" value="{{ old('daily_rate', 0) }}" required></div>
-            <button class="btn btn-primary w-100" type="submit">Save Driver</button>
-        </form></div></div></div>
-        <div class="col-lg-8"><div class="card mb-4"><div class="card-header"><h5 class="mb-0">Available to outsource</h5></div><div class="card-body">@if($availableExternalDrivers->isEmpty())<p class="text-muted mb-0">No external drivers are currently available.</p>@else<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Driver</th><th>Licence</th><th></th></tr></thead><tbody>@foreach($availableExternalDrivers as $driver)<tr><td>{{ $driver->full_name }}</td><td>{{ $driver->license_number }}</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary hire-driver" data-licence="{{ $driver->license_number }}">Hire</button></td></tr>@endforeach</tbody></table></div>@endif</div></div><div class="card"><div class="card-header"><h5 class="mb-0">Your driver assignments</h5></div><div class="card-body">@if($drivers->isEmpty())<p class="text-muted mb-0">No drivers assigned yet.</p>@else<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Driver</th><th>Licence</th><th>Daily Rate</th><th>Availability</th><th>Default</th><th></th></tr></thead><tbody>@foreach($drivers as $driver)<tr><td><strong>{{ $driver->full_name }}</strong><small class="d-block text-muted">{{ $driver->phone ?: $driver->email ?: 'No contact details' }}</small></td><td>{{ $driver->license_number }}</td><td><form id="driver-{{ $driver->license_number }}" method="POST" action="{{ route('business.drivers.update', $driver) }}">@csrf @method('PUT')<input type="number" name="daily_rate" class="form-control form-control-sm" min="0" step="0.01" value="{{ $driver->pivot->daily_rate }}"></form></td><td><select form="driver-{{ $driver->license_number }}" name="is_available" class="form-select form-select-sm"><option value="1" @selected($driver->pivot->is_available)>Available</option><option value="0" @selected(! $driver->pivot->is_available)>Unavailable</option></select></td><td><div class="form-check"><input form="driver-{{ $driver->license_number }}" id="default-driver-{{ $loop->index }}" class="form-check-input default-driver-radio" type="radio" name="default_driver" value="{{ $driver->license_number }}" @checked($driver->pivot->is_default)><label class="form-check-label" for="default-driver-{{ $loop->index }}">Default</label></div></td><td class="text-end text-nowrap"><a href="{{ route('business.drivers.show', $driver) }}" class="btn btn-sm btn-outline-secondary">View Profile</a><button form="driver-{{ $driver->license_number }}" class="btn btn-sm btn-outline-primary">Save</button><form method="POST" class="d-inline" action="{{ route('business.drivers.destroy', $driver) }}">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this driver from your business?')">Remove</button></form></td></tr>@endforeach</tbody></table></div>@endif</div></div></div>
-    </div>
+@section('title', 'Approved Drivers | Nogaru Car Rental')
+@section('page-title', 'Approved Drivers')
+@section('page-actions')
+    <a href="{{ route('business.bookings.index') }}" class="btn btn-primary"><i class="ti ti-calendar-check me-1"></i>Select for a booking</a>
+    <a href="{{ route('business.fleet.index') }}" class="btn btn-outline-secondary"><i class="ti ti-car me-1"></i>Fleet</a>
 @endsection
 
-@push('scripts')
-    <script>
-        document.querySelectorAll('.hire-driver').forEach((button) => button.addEventListener('click', () => {
-            document.getElementById('license-number').value = button.dataset.licence;
-            document.getElementById('daily-rate').focus();
-        }));
-        document.querySelectorAll('.default-driver-radio').forEach((radio) => radio.addEventListener('change', () => {
-            document.querySelectorAll('.default-driver-radio').forEach((input) => input.checked = input === radio);
-            document.querySelectorAll('form[id^="driver-"]').forEach((form) => {
-                const isDefault = form.id === `driver-${radio.value}`;
-                let defaultInput = form.querySelector('input[name="is_default"]');
-                if (!defaultInput) {
-                    defaultInput = document.createElement('input');
-                    defaultInput.type = 'hidden';
-                    defaultInput.name = 'is_default';
-                    form.appendChild(defaultInput);
-                }
-                defaultInput.value = isDefault ? '1' : '0';
-            });
-        }));
-    </script>
-@endpush
+@section('content')
+    <div class="alert alert-info"><i class="ti ti-info-circle me-1"></i> This directory shows drivers approved by the system administrator. To choose a driver, open a confirmed booking and select from its driver applicants.</div>
+    <div class="row g-4">
+        @forelse ($drivers as $driver)
+            <div class="col-xl-4 col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div><h4 class="mb-1">{{ $driver->full_name }}</h4><p class="text-muted mb-0">{{ $driver->driver_code ?: $driver->license_number }}</p></div>
+                            <span class="badge bg-success-subtle text-success">Approved</span>
+                        </div>
+                        <dl class="row small mb-3">
+                            <dt class="col-5">License</dt><dd class="col-7">{{ $driver->license_number }}</dd>
+                            <dt class="col-5">Classification</dt><dd class="col-7">{{ $driver->license_type ?: 'Not specified' }}</dd>
+                            <dt class="col-5">Experience</dt><dd class="col-7">{{ $driver->years_driving_experience ?: 0 }} years</dd>
+                            <dt class="col-5">Contact</dt><dd class="col-7">{{ $driver->phone ?: $driver->email ?: 'Not provided' }}</dd>
+                        </dl>
+                        <div class="border-top pt-3"><strong class="small">Published trip rates</strong>@forelse($driver->rates as $rate)<div class="d-flex justify-content-between small mt-2"><span>{{ str($rate->trip_type)->replace('_', ' ')->headline() }}</span><span>₱{{ number_format((float) $rate->amount, 2) }} <span class="text-muted">{{ str($rate->rate_type)->replace('_', ' ') }}</span></span></div>@empty<p class="small text-muted mt-2 mb-0">No published rates.</p>@endforelse</div>
+                        <a href="{{ route('business.drivers.show', $driver) }}" class="btn btn-outline-primary btn-sm mt-3">View profile</a>
+                    </div>
+                </div>
+            </div>
+        @empty
+            <div class="col-12"><div class="card"><div class="card-body text-center py-5 text-muted">No administrator-approved drivers are available.</div></div></div>
+        @endforelse
+    </div>
+@endsection

@@ -10,9 +10,11 @@ use App\Models\Car;
 use App\Models\ClientIdentityDocument;
 use App\Models\ClientProfile;
 use App\Models\Driver;
+use App\Models\DriverRate;
 use App\Models\PlatformLandingPage;
 use App\Models\Quotation;
 use App\Models\QuotationFootnote;
+use App\Models\SavedLocation;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
@@ -37,6 +39,8 @@ class CarRentalDemoSeeder extends Seeder
         Role::findOrCreate('business_owner');
         Role::findOrCreate('client');
         Role::findOrCreate('administrator');
+        Role::findOrCreate('driver');
+        Role::findOrCreate('sales_agent');
         $this->seedPlatformLandingPage();
         $plans = $this->seedPlans();
 
@@ -81,6 +85,8 @@ class CarRentalDemoSeeder extends Seeder
                     $car->rates()->updateOrCreate(['name' => $name], ['value' => $value]);
                 }
             }
+
+            $this->seedSavedLocations($business);
         }
 
         $this->seedClient();
@@ -145,7 +151,7 @@ class CarRentalDemoSeeder extends Seeder
     {
         $businesses = [
             ['free', 'Freeway Rentals', 'freeway-rentals', 'Ava Cruz', 'ava@freeway-rentals.test'],
-            ['free', 'Budget Drive', 'budget-drive', 'Noah Reyes', 'noah@budget-drive.test'],
+            ['free', 'Nogaru Car Rental', 'nogaru-car-rental', 'Jasper Garcera', 'nogaru.car.rental@gmail.com'],
             ['free', 'Coastline Car Hire', 'coastline-car-hire', 'Mia Santos', 'mia@coastline-car-hire.test'],
             ['free', 'City Wheels', 'city-wheels', 'Ethan Garcia', 'ethan@city-wheels.test'],
             ['free', 'Summit Mobility', 'summit-mobility', 'Liam Torres', 'liam@summit-mobility.test'],
@@ -185,7 +191,7 @@ class CarRentalDemoSeeder extends Seeder
                     ],
                 ],
                 'contact_email' => $ownerEmail,
-                'contact_phone' => '+639171234567',
+                'contact_phone' => '09765297961',
                 'contact_address' => 'Rizal Street, Legazpi City, Albay',
                 'garage_address' => 'Maharlika Highway, Santa Cruz, San Isidro, Baao, Camarines Sur',
                 'garage_latitude' => 13.4543,
@@ -239,18 +245,86 @@ class CarRentalDemoSeeder extends Seeder
     private function seedDriversForBusiness(Business $business): void
     {
         $drivers = [
-            ['license_number' => 'N01-23-456789', 'full_name' => 'Marco Villanueva', 'phone' => '+639171112233', 'email' => 'marco.villanueva@example.test', 'daily_rate' => 1500],
-            ['license_number' => 'N02-34-567890', 'full_name' => 'Paolo Ramirez', 'phone' => '+639179876543', 'email' => 'paolo.ramirez@example.test', 'daily_rate' => 1650],
+            ['license_number' => 'N01-23-456789', 'full_name' => 'Marco Villanueva', 'phone' => '+639171112233', 'email' => 'marco.villanueva@example.test', 'daily_rate' => 1000],
+            ['license_number' => 'N02-34-567890', 'full_name' => 'Paolo Ramirez', 'phone' => '+639179876543', 'email' => 'paolo.ramirez@example.test', 'daily_rate' => 1000],
         ];
 
         foreach ($drivers as $index => $driverData) {
             $driver = Driver::updateOrCreate(
                 ['license_number' => $driverData['license_number']],
-                Arr::except($driverData, ['daily_rate']),
+                Arr::except($driverData, ['daily_rate']) + [
+                    'driver_code' => 'DRV-'.str_replace('-', '', $driverData['license_number']),
+                    'approval_status' => 'approved',
+                    'employment_status' => 'active',
+                ],
             );
             $business->drivers()->syncWithoutDetaching([
                 $driver->license_number => ['daily_rate' => $driverData['daily_rate'], 'is_available' => true, 'is_default' => $index === 0],
             ]);
+
+            foreach ([
+                ['trip_type' => 'airport_transfer', 'rate_type' => 'per_trip', 'amount' => 600, 'overtime_rate' => 200],
+                ['trip_type' => 'city_tour', 'rate_type' => 'per_day', 'amount' => 1000, 'overtime_rate' => 150],
+                ['trip_type' => 'full_day', 'rate_type' => 'per_day', 'amount' => 1500, 'overtime_rate' => 200],
+                ['trip_type' => 'out_of_town', 'rate_type' => 'per_day', 'amount' => 1800, 'overtime_rate' => 200],
+                ['trip_type' => 'multi_day', 'rate_type' => 'per_day', 'amount' => 1500, 'overtime_rate' => 200],
+                ['trip_type' => 'wedding_event', 'rate_type' => 'per_event', 'amount' => 2000, 'overtime_rate' => 250],
+                ['trip_type' => 'corporate', 'rate_type' => 'per_day', 'amount' => 2500, 'overtime_rate' => 300],
+            ] as $rate) {
+                DriverRate::updateOrCreate(
+                    ['driver_license_number' => $driver->license_number, 'trip_type' => $rate['trip_type']],
+                    Arr::except($rate, ['trip_type']),
+                );
+            }
+        }
+    }
+
+    private function seedSavedLocations(Business $business): void
+    {
+        if ($business->slug !== 'nogaru-car-rental') {
+            return;
+        }
+
+        $locations = [
+            ['title' => 'Cagsawa Ruins', 'address' => 'Cagsawa Church, Maharlika Highway, Cullat, Busay, Daraga, Albay, Bicol Region, 4501, Philippines', 'latitude' => 13.1659400, 'longitude' => 123.7009832],
+            ['title' => 'Giant Statue of Nuestra Sra de Salvacion', 'address' => 'Tamaoyan, Legazpi, Albay, Bicol Region, 4500, Philippines', 'latitude' => 13.1702189, 'longitude' => 123.7392095],
+            ['title' => 'Legazpi Sign', 'address' => 'Legazpi Sign, Legazpi Boulevard, Puro, Lamba, Legazpi, Albay, Bicol Region, 4500, Philippines', 'latitude' => 13.1343216, 'longitude' => 123.7670857],
+            ['title' => 'Daraga Church', 'address' => 'Santa Maria Street, Purok 7, Market Area Poblacion, Kimantong, Daraga, Albay, Bicol Region, 4501, Philippines', 'latitude' => 13.1499150, 'longitude' => 123.7125564],
+            ['title' => 'Farm Plate', 'address' => 'Kiwalo Street, Kiwalo, Daraga, Albay, Bicol Region, 4501, Philippines', 'latitude' => 13.1296016, 'longitude' => 123.7159762],
+            ['title' => 'Highlands Park', 'address' => 'Estanza-Tabon-Tabon Road, Estanza, Legazpi, Albay, Bicol Region, 4500, Philippines', 'latitude' => 13.1245916, 'longitude' => 123.7261498],
+            ['title' => 'ATV Adventure', 'address' => 'Cullat, Busay, Daraga, Albay, Bicol Region, 4501, Philippines', 'latitude' => 13.1648231, 'longitude' => 123.6987752],
+            ['title' => 'National Museum - Bicol', 'address' => 'National Museum - Bicol Regional Museum, Maharlika Highway, Cullat, Busay, Daraga, Albay, Bicol Region, 4501, Philippines', 'latitude' => 13.1647291, 'longitude' => 123.7015808],
+            ['title' => 'Quituinan Ranch', 'address' => 'Quituinan Ranch, D. Nieves Street, Barangay 3, Lacag, Mina, Albay, Bicol Region, 4502, Philippines', 'latitude' => 13.1702105, 'longitude' => 123.6654491],
+            ['title' => '7 Eleven - Camalig Bypass Road', 'address' => '7-Eleven, Camalig Diversion Road, Barangay 4, Salvacion, Salugan, Albay, Bicol Region, 4502, Philippines', 'latitude' => 13.1883640, 'longitude' => 123.6619055],
+            ['title' => 'Quitinday Hills and Nature Park', 'address' => 'Quitinday Hills, General Simeon A. Ola Road, Pariaan, Albay, Bicol Region, Philippines', 'latitude' => 13.0998037, 'longitude' => 123.6156803],
+            ['title' => 'Hoyop-hoyopan Cave', 'address' => 'Hoyop-Hoyopan Cave, Comun-Inarado-Peñafrancia Road, Binitayan, Daraga, Albay, Bicol Region, Philippines', 'latitude' => 13.1207143, 'longitude' => 123.6563101],
+            ['title' => 'Hobbit Hills', 'address' => 'Amtic, Albay, Bicol Region, Philippines', 'latitude' => 13.2975250, 'longitude' => 123.6135721],
+            ['title' => 'Jovellar Underground River', 'address' => 'Poblacion, Quitinday, Albay, Bicol Region, Philippines', 'latitude' => 13.0766514, 'longitude' => 123.6042273],
+            ['title' => 'The Oriental Hotel', 'address' => 'The Oriental Legazpi, Legazpi City - Punta De Jesus Road, Tula-tula, Estanza, Legazpi, Albay, Bicol Region, 4500, Philippines', 'latitude' => 13.1345659, 'longitude' => 123.7387703],
+            ['title' => 'Pepita Park - Rest area', 'address' => 'Maharlika Highway, Rizal, Sorsogon, Bicol Region, Philippines', 'latitude' => 12.9791124, 'longitude' => 123.9182527],
+            ['title' => 'Sorsogon Prov Capitol', 'address' => 'Sorsogon Provincial Capitol Complex, Bitan-o, Sorsogon City, Sorsogon, Bicol Region, 4700, Philippines', 'latitude' => 12.9718657, 'longitude' => 124.0017296],
+            ['title' => 'Sorsogon Museum', 'address' => 'Sorsogon Museum, Flores Street, Bitan-o, Sorsogon City, Sorsogon, Bicol Region, 4700, Philippines', 'latitude' => 12.9722956, 'longitude' => 124.0018702],
+            ['title' => 'Rompeolas', 'address' => 'Rompeolas, Bitan-o, Sorsogon City, Sorsogon, Bicol Region, 4700, Philippines', 'latitude' => 12.9637511, 'longitude' => 124.0046409],
+            ['title' => 'Sports Complex', 'address' => 'Street Road, Balogo Sports Complex, Bibincahan, Sorsogon City, Sorsogon, Bicol Region, 4700, Philippines', 'latitude' => 12.9774813, 'longitude' => 124.0139508],
+            ['title' => 'Barcelona Ruins', 'address' => 'Poblacion Norte, Benquet, Barcelona, Sorsogon, Bicol Region, Philippines', 'latitude' => 12.8678490, 'longitude' => 124.1435605],
+            ['title' => 'Barcelona Church', 'address' => 'Poblacion Norte, Benquet, Barcelona, Sorsogon, Bicol Region, Philippines', 'latitude' => 12.8675274, 'longitude' => 124.1437671],
+            ['title' => 'Bulusan Volcano Nature Park', 'address' => 'San Rafael, Sorsogon, Bicol Region, 4704, Philippines', 'latitude' => 12.7398091, 'longitude' => 124.0987086],
+            ['title' => 'Bidi-Bidi (handicrafts)', 'address' => 'Rizal Street, Del Rosario, La Medalla, Baao, Camarines Sur, Bicol Region, 4432, Philippines', 'latitude' => 13.4554824, 'longitude' => 123.3655509],
+            ['title' => 'The House of Pili', 'address' => 'J Emmanuel Pastries, Magsaysay Avenue, Jacob, Peñafrancia, San Felipe, Naga, Bicol Region, 4400, Philippines', 'latitude' => 13.6310642, 'longitude' => 123.1973737],
+            ['title' => 'Basilica Church', 'address' => 'Basilica Loop, Lomeda, Balatas, San Felipe, Naga, Bicol Region, 4400, Philippines', 'latitude' => 13.6318696, 'longitude' => 123.1995463],
+            ['title' => 'Our Lady of Peñafrancia Shrine', 'address' => 'P. Miguel Robles de Covarrubias Monument, Peñafrancia Avenue, Jacob, Peñafrancia, San Felipe, Naga, Bicol Region, 4400, Philippines', 'latitude' => 13.6342182, 'longitude' => 123.1952816],
+            ['title' => 'Cathedral Naga Church', 'address' => 'Naga Cathedral Historical Marker, Elias Angeles Street, Zone 1, San Francisco, San Felipe, Naga, Bicol Region, 4400, Philippines', 'latitude' => 13.6281786, 'longitude' => 123.1872591],
+            ['title' => 'NHCP Museo ni Jesse Robredo', 'address' => 'Dayangdang, San Felipe, Naga, Bicol Region, 4400, Philippines', 'latitude' => 13.6284262, 'longitude' => 123.1973577],
+            ['title' => 'The Original Buko Pie', 'address' => 'Maharlika Highway, Palestina, Pili, Camarines Sur, Bicol Region, 4418, Philippines', 'latitude' => 13.6154888, 'longitude' => 123.2468739],
+            ['title' => 'CWC, Cam Sur WaterSports Complex', 'address' => 'CWC Road, Cadlan, Pili, Camarines Sur, Bicol Region, 4418, Philippines', 'latitude' => 13.5900969, 'longitude' => 123.2528794],
+            ['title' => 'Sumlang Lake', 'address' => 'Maharlika Highway, Salvacion, Daraga, Albay, Bicol Region, 4502, Philippines', 'latitude' => 13.1786858, 'longitude' => 123.6727524],
+        ];
+
+        foreach ($locations as $location) {
+            SavedLocation::updateOrCreate(
+                ['business_id' => $business->id, 'title' => $location['title']],
+                Arr::except($location, ['title']),
+            );
         }
     }
 

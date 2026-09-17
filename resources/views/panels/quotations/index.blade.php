@@ -5,7 +5,7 @@
 
 @section('content')
     <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
-    <link href="{{ asset('theme/assets/plugins/quill/quill.snow.css') }}" rel="stylesheet">
+    <link href="{{ asset('theme/assets/plugins/summernote/summernote-bs5.min.css') }}" rel="stylesheet">
     <style>.itinerary-item { cursor: grab; } .quotation-map { height: min(55vh, 440px); border-radius: .5rem; overflow: hidden; } .quotation-list-scroll { overflow-y: auto; scrollbar-color: #aab7c4 transparent; scrollbar-width: thin; } .quotation-list-scroll::-webkit-scrollbar { width: 6px; } .quotation-list-scroll::-webkit-scrollbar-thumb { background: #aab7c4; border-radius: 999px; }</style>
 
     <div class="row g-4">
@@ -54,23 +54,25 @@
 @endsection
 
 @push('scripts')
-    <script src="{{ asset('theme/assets/plugins/quill/quill.js') }}"></script>
+    <script src="{{ asset('theme/assets/plugins/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('theme/assets/plugins/summernote/summernote-bs5.min.js') }}"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('#quotation-footnote-editor').closest('.card').before(document.getElementById('other-payments-card'));
             const garage = { lat: Number(@json($business->garage_latitude ?? 13.1391)), lng: Number(@json($business->garage_longitude ?? 123.7438)) };
             const decodeBase64 = (content) => new TextDecoder().decode(Uint8Array.from(atob(content), character => character.charCodeAt(0)));
+            const summernoteOptions = { height: 180, fontSizes: ['4', '5', '6', '7', '8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '32', '36', '48', '72'], toolbar: [['misc', ['undo', 'redo']], ['style', ['style']], ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'clear']], ['fontname', ['fontname']], ['fontsize', ['fontsize']], ['color', ['color']], ['para', ['ul', 'ol', 'paragraph']], ['height', ['height']], ['table', ['table']], ['insert', ['link', 'picture', 'video', 'hr']], ['view', ['fullscreen', 'codeview', 'help']]] };
+            const setEditorContent = (editor, content) => editor.summernote('code', content || '');
+            const quotationFootnoteEditor = $('#quotation-footnote-editor').summernote(summernoteOptions);
             const footnoteContent = document.getElementById('quotation-footnote-content');
-            const editorOptions = { theme: 'snow', modules: { toolbar: [[{ font: [] }, { size: ['small', false, 'large', 'huge'] }], ['bold', 'italic', 'underline', 'strike'], [{ color: [] }], [{ header: [1, 2, 3, false] }, { align: [] }], [{ list: 'ordered' }, { list: 'bullet' }], ['blockquote', 'link'], ['clean']] } };
-            const footnoteEditor = new Quill('#quotation-footnote-editor', editorOptions);
-            footnoteEditor.clipboard.dangerouslyPasteHTML(footnoteContent.value);
-            footnoteEditor.on('text-change', () => footnoteContent.value = footnoteEditor.root.innerHTML === '<p><br></p>' ? '' : footnoteEditor.root.innerHTML);
-            document.getElementById('quotation-footnote').addEventListener('change', event => { const option = event.target.selectedOptions[0]; footnoteEditor.clipboard.dangerouslyPasteHTML(option?.dataset.content ? decodeBase64(option.dataset.content) : ''); });
-            document.querySelectorAll('.apply-footnote').forEach(button => button.addEventListener('click', () => { const selector = document.getElementById('quotation-footnote'); selector.value = button.dataset.id; footnoteEditor.clipboard.dangerouslyPasteHTML(decodeBase64(button.dataset.content)); }));
+            setEditorContent(quotationFootnoteEditor, footnoteContent.value);
+            quotationFootnoteEditor.on('summernote.change', () => footnoteContent.value = quotationFootnoteEditor.summernote('code'));
+            document.getElementById('quotation-footnote').addEventListener('change', event => { const option = event.target.selectedOptions[0]; setEditorContent(quotationFootnoteEditor, option?.dataset.content ? decodeBase64(option.dataset.content) : ''); });
+            document.querySelectorAll('.apply-footnote').forEach(button => button.addEventListener('click', () => { const selector = document.getElementById('quotation-footnote'); selector.value = button.dataset.id; setEditorContent(quotationFootnoteEditor, decodeBase64(button.dataset.content)); }));
             const footnoteLibraryContent = document.getElementById('footnote-library-content');
-            const footnoteLibraryEditor = new Quill('#footnote-library-editor', editorOptions);
-            footnoteLibraryEditor.on('text-change', () => footnoteLibraryContent.value = footnoteLibraryEditor.root.innerHTML === '<p><br></p>' ? '' : footnoteLibraryEditor.root.innerHTML);
+            const footnoteLibraryEditor = $('#footnote-library-editor').summernote(summernoteOptions);
+            footnoteLibraryEditor.on('summernote.change', () => footnoteLibraryContent.value = footnoteLibraryEditor.summernote('code'));
             const list = document.getElementById('itinerary-list'); let draggedItem; let targetItem; let targetBoundary; let selectedLocation;
             const otherPaymentsList = document.getElementById('other-payments-list'); const otherPaymentModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('other-payment-modal')); const otherPaymentForm = document.getElementById('other-payment-form'); const otherPaymentName = document.getElementById('other-payment-name'); const otherPaymentAmount = document.getElementById('other-payment-amount'); let editingOtherPayment = null; let draggedPayment;
             const otherPayments = @json(old('other_payments', $editingQuotation?->other_payments ?? []));
@@ -98,8 +100,8 @@
             const savedLocationUpdateUrl = @json(route('business.quotations.saved-locations.update', ['savedLocation' => '__LOCATION__']));
             document.querySelectorAll('.edit-saved-location').forEach(button => button.addEventListener('click', () => { document.getElementById('edit-saved-location-form').action = savedLocationUpdateUrl.replace('__LOCATION__', button.dataset.id); document.getElementById('edit-saved-title').value = button.dataset.title; document.getElementById('edit-saved-address').value = button.dataset.address; document.getElementById('edit-saved-latitude').value = button.dataset.latitude; document.getElementById('edit-saved-longitude').value = button.dataset.longitude; savedLocationEditModal.show(); }));
             const footnoteModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('footnote-modal')); const footnoteUpdateUrl = @json(route('business.quotations.footnotes.update', ['footnote' => '__FOOTNOTE__']));
-            document.getElementById('add-footnote-button').addEventListener('click', () => { const form = document.getElementById('footnote-form'); form.action = @json(route('business.quotations.footnotes.store')); form.querySelector('input[name="_method"]')?.remove(); form.reset(); footnoteLibraryEditor.setText(''); });
-            document.querySelectorAll('.edit-footnote').forEach(button => button.addEventListener('click', () => { const form = document.getElementById('footnote-form'); form.action = footnoteUpdateUrl.replace('__FOOTNOTE__', button.dataset.id); form.querySelector('input[name="_method"]')?.remove(); form.insertAdjacentHTML('afterbegin', '<input type="hidden" name="_method" value="PUT">'); document.getElementById('footnote-title').value = button.dataset.title; footnoteLibraryEditor.clipboard.dangerouslyPasteHTML(decodeBase64(button.dataset.content)); footnoteModal.show(); }));
+            document.getElementById('add-footnote-button').addEventListener('click', () => { const form = document.getElementById('footnote-form'); form.action = @json(route('business.quotations.footnotes.store')); form.querySelector('input[name="_method"]')?.remove(); form.reset(); footnoteLibraryContent.value = ''; setEditorContent(footnoteLibraryEditor, ''); });
+            document.querySelectorAll('.edit-footnote').forEach(button => button.addEventListener('click', () => { const form = document.getElementById('footnote-form'); form.action = footnoteUpdateUrl.replace('__FOOTNOTE__', button.dataset.id); form.querySelector('input[name="_method"]')?.remove(); form.insertAdjacentHTML('afterbegin', '<input type="hidden" name="_method" value="PUT">'); document.getElementById('footnote-title').value = button.dataset.title; footnoteLibraryContent.value = decodeBase64(button.dataset.content); setEditorContent(footnoteLibraryEditor, footnoteLibraryContent.value); footnoteModal.show(); }));
             document.getElementById('hidden-charges').addEventListener('input', updateTotals);
             const vehicleRateSelect = document.getElementById('quotation-rate'); const selectedVehicleRate = @json(old('vehicle_rate_name', $editingQuotation?->vehicle_rate_name)); const loadVehicleRates = () => { const carOption = document.getElementById('quotation-car').selectedOptions[0]; const rates = carOption?.dataset.rates ? JSON.parse(carOption.dataset.rates) : []; vehicleRateSelect.replaceChildren(); rates.forEach(rate => { const option = new Option(`${rate.name} — ${peso(rate.value)}`, rate.name); option.dataset.value = rate.value; option.selected = rate.name === selectedVehicleRate; vehicleRateSelect.add(option); }); if (!rates.length) vehicleRateSelect.add(new Option('No rates available', '')); vehicleRateSelect.disabled = rates.length === 0; updateTotals(); }; document.getElementById('quotation-car').addEventListener('change', loadVehicleRates); vehicleRateSelect.addEventListener('change', updateTotals);
             const existingItinerary = @json($editingQuotation?->itinerary ?? []); if (existingItinerary.length) { existingItinerary.forEach(location => addItem(location)); } else { addItem(); } renderOtherPayments(); loadVehicleRates();

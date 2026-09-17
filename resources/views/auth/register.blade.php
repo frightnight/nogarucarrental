@@ -88,6 +88,7 @@
 
                     <div class="row mt-3">
                         <div class="col-12 text-center">
+                            <p class="text-muted">Applying as a driver? <a href="{{ route('driver.register') }}" class="text-muted ms-1"><b>Driver registration</b></a></p>
                             <p class="text-muted">Already have an account? <a href="{{ route('login') }}" class="text-muted ms-1"><b>Log In</b></a></p>
                         </div> <!-- end col -->
                     </div>

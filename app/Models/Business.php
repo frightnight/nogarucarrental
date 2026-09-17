@@ -19,6 +19,15 @@ class Business extends Model
         'city',
         'description',
         'business_plan_id',
+        'business_type',
+        'business_category',
+        'business_address',
+        'contact_number',
+        'registration_number',
+        'tin',
+        'permit_issuer',
+        'permit_images',
+        'profile_completed_at',
         'hero_title',
         'hero_subtitle',
         'about_title',
@@ -43,6 +52,8 @@ class Business extends Model
     {
         return [
             'about_features' => 'array',
+            'permit_images' => 'array',
+            'profile_completed_at' => 'datetime',
             'garage_latitude' => 'decimal:7',
             'garage_longitude' => 'decimal:7',
             'diesel_premium_price_per_liter' => 'decimal:2',
@@ -68,7 +79,7 @@ class Business extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'business_users')
-            ->withPivot(['business_role'])
+            ->withPivot(['business_role', 'commission_rate_percent', 'is_active'])
             ->withTimestamps();
     }
 
@@ -107,5 +118,15 @@ class Business extends Model
     public function quotationFootnotes(): HasMany
     {
         return $this->hasMany(QuotationFootnote::class);
+    }
+
+    public function salesLeads(): HasMany
+    {
+        return $this->hasMany(SalesLead::class);
+    }
+
+    public function salesCommissions(): HasMany
+    {
+        return $this->hasMany(SalesCommission::class);
     }
 }

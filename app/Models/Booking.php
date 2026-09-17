@@ -21,6 +21,7 @@ class Booking extends Model
         'business_id',
         'car_id',
         'driver_license_number',
+        'driver_fee',
         'rental_type',
         'pickup_date',
         'pickup_time',
@@ -105,5 +106,27 @@ class Booking extends Model
     public function inspections(): HasMany
     {
         return $this->hasMany(VehicleInspection::class);
+    }
+
+    public function driverEvaluations(): HasMany
+    {
+        return $this->hasMany(DriverEvaluation::class);
+    }
+
+    public function driverApplications(): HasMany
+    {
+        return $this->hasMany(DriverBookingApplication::class);
+    }
+
+    public function serviceLabel(): string
+    {
+        return match ($this->rental_type) {
+            'airport_pickup' => 'airport transfer',
+            'city_tour' => 'city tour',
+            'out_of_town' => 'out-of-town',
+            'wedding_event' => 'wedding/event',
+            'corporate' => 'corporate',
+            default => 'chauffeur',
+        };
     }
 }
